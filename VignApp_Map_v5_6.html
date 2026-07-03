@@ -394,8 +394,35 @@ body {
 
 /* ── RILIEVO SCREEN ── */
 #page-rilievo {
-  padding-bottom: calc(60px + 64px + env(safe-area-inset-bottom, 0px));
+  padding-bottom: 0;
 }
+/* Durante il rilievo la pagina diventa un overlay a tutto schermo:
+   intestazione fissa in alto, area classificazione con scroll indipendente,
+   footer (Annulla/Filare succ./Termina) sempre visibile e mai sovrapposto.
+   Specificità dell'ID sovrascrive la regola generica .page.active{display:block}. */
+#page-rilievo.active {
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  top: 56px; /* altezza #topbar */
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: 0;
+  width: 100%;
+  max-width: 430px;
+  background: var(--bg);
+  z-index: 50;
+}
+#page-rilievo.active > * { flex-shrink: 0; }
+#page-rilievo.active > .rilievo-scroll-area {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+/* Nasconde la barra di navigazione principale durante il rilievo:
+   libera spazio prezioso, non serve mentre si è concentrati sul conteggio piante. */
+body.rilievo-fullscreen #bottom-nav { display: none; }
 .rilievo-header {
   background: var(--vine);
   color: #fff;
@@ -545,6 +572,27 @@ body {
 .btn-rimpiazzo{ background: linear-gradient(145deg, #3B82F6, #2563EB); }
 .btn-morta    { background: linear-gradient(145deg, #4B5563, #1F2937); }
 
+/* Adattamento a telefoni con schermo verticalmente più basso (es. modelli compatti
+   o con tastiera software aperta): riduce l'ingombro dei pulsanti di classificazione
+   per ridurre al minimo lo scroll durante il rilievo. L'area resta comunque scrollabile
+   come rete di sicurezza, ma su queste dimensioni entra tutto a schermo. */
+@media (max-height: 720px) {
+  .classif-grid { gap: 8px; padding: 8px 12px; }
+  .classif-btn { padding: 13px 10px; gap: 6px; font-size: 14px; }
+  .classif-btn .dot { width: 22px; height: 22px; }
+  .rilievo-header { padding: 6px 12px 8px; }
+  .note-field textarea { height: 34px; }
+}
+@media (max-height: 620px) {
+  .classif-grid { gap: 6px; padding: 6px 12px; }
+  .classif-btn { padding: 9px 8px; gap: 4px; font-size: 12.5px; border-radius: 11px; }
+  .classif-btn .dot { width: 16px; height: 16px; }
+  .rilievo-counter .num { font-size: 15px; }
+  .plant-code { padding: 4px 10px; margin-bottom: 4px; }
+  .gps-bar { padding: 3px 12px; }
+  .note-field textarea { height: 30px; }
+}
+
 /* Note field */
 .note-field {
   padding: 0 12px 8px;
@@ -562,21 +610,66 @@ body {
   height: 42px;
 }
 
+/* Ultime immissioni: striscia scorrevole orizzontale che mostra le ultime piante
+   classificate (codice + colore/nome classe), per verificare a colpo d'occhio
+   di aver premuto il pulsante giusto. La più recente è sempre a sinistra. */
+.ril-recent {
+  display: flex;
+  gap: 6px;
+  padding: 2px 12px 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.ril-recent::-webkit-scrollbar { display: none; }
+.ril-recent-empty {
+  font-size: 11px;
+  color: var(--text-soft);
+  padding: 4px 2px;
+}
+.ril-recent-chip {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px 5px 8px;
+  border-radius: 99px;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  font-size: 11px;
+  white-space: nowrap;
+}
+.ril-recent-chip.is-last {
+  border-color: var(--vine);
+  background: var(--surface2);
+  font-weight: 700;
+}
+.ril-recent-chip .rc-dot {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.ril-recent-chip .rc-code {
+  font-family: var(--font-mono);
+  color: var(--text-mid);
+}
+.ril-recent-chip .rc-cls {
+  color: var(--text);
+  max-width: 90px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 /* Navigation bottom */
+.rilievo-footer {
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  box-shadow: 0 -2px 8px rgba(0,0,0,.08);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
 .rilievo-nav {
   padding: 8px 12px;
   display: flex;
   gap: 8px;
-  border-top: 1px solid var(--border);
-  background: var(--surface);
-  position: fixed;
-  bottom: calc(64px + env(safe-area-inset-bottom, 0px));
-  left: 50%;
-  transform: translateX(-50%);
-  width: 100%;
-  max-width: 430px;
-  z-index: 90;
-  box-shadow: 0 -2px 8px rgba(0,0,0,.08);
 }
 .nav-prev, .nav-next {
   flex: 1;
@@ -599,9 +692,8 @@ body {
   flex: 2;
 }
 .btn-complete {
-  width: 100%;
-  margin: 0 12px;
   width: calc(100% - 24px);
+  margin: 0 12px 10px;
   padding: 11px;
   border-radius: 11px;
   border: none;
@@ -614,7 +706,6 @@ body {
   align-items: center;
   justify-content: center;
   gap: 7px;
-  margin-bottom: 8px;
 }
 
 /* ── MAPPA ── */
@@ -1073,6 +1164,24 @@ body {
 </head>
 <body>
 
+<!-- LOGIN GATE -->
+<div id="login-gate" style="position:fixed; inset:0; z-index:99999; background:#F5F2ED; display:flex; align-items:center; justify-content:center; padding:24px;">
+  <div style="width:100%; max-width:340px; background:#FFFFFF; border:1px solid #E0DAD0; border-radius:16px; padding:32px 28px; text-align:center; box-shadow:0 8px 24px rgba(0,0,0,0.08);">
+    <div style="width:56px; height:56px; margin:0 auto 16px; background:#1E5C2E; border-radius:14px; display:flex; align-items:center; justify-content:center;">
+      <svg width="28" height="28" fill="none" stroke="#F5F2ED" stroke-width="2" viewBox="0 0 24 24"><path d="M12 2a9 9 0 0 1 9 9c0 4.17-2.84 7.67-6.75 8.68L12 22l-2.25-2.32C5.84 18.67 3 15.17 3 11a9 9 0 0 1 9-9z"/><circle cx="12" cy="11" r="3"/></svg>
+    </div>
+    <div style="font-family:'Inter',sans-serif; font-weight:700; font-size:18px; color:#1E5C2E; margin-bottom:4px;">VignaApp Map</div>
+    <div style="font-family:'Inter',sans-serif; font-size:13px; color:#8A8478; margin-bottom:20px;">Accesso riservato — inserisci la password</div>
+    <input type="password" id="login-pw-input" placeholder="Password" autocomplete="current-password"
+      style="width:100%; box-sizing:border-box; padding:12px 14px; border:1px solid #E0DAD0; border-radius:10px; font-size:15px; font-family:'Inter',sans-serif; margin-bottom:10px; outline:none;">
+    <div id="login-error" style="color:#B3452E; font-size:12px; font-family:'Inter',sans-serif; min-height:16px; margin-bottom:8px;"></div>
+    <button id="login-submit-btn" onclick="attemptLogin()"
+      style="width:100%; padding:12px; background:#1E5C2E; color:#F5F2ED; border:none; border-radius:10px; font-size:15px; font-weight:600; font-family:'Inter',sans-serif; cursor:pointer;">
+      Accedi
+    </button>
+  </div>
+</div>
+
 <!-- TOPBAR -->
 <div id="topbar">
   <button id="back-btn" onclick="goBack()">
@@ -1373,28 +1482,36 @@ body {
     <span class="gps-coords" id="gps-coords" style="margin-left:auto;"></span>
   </div>
 
-  <div class="classif-grid" id="classif-grid">
-    <!-- populated dynamically by renderClassifButtons() -->
+  <div class="rilievo-scroll-area">
+    <div class="classif-grid" id="classif-grid">
+      <!-- populated dynamically by renderClassifButtons() -->
+    </div>
+
+    <div class="ril-recent" id="ril-recent">
+      <!-- populated dynamically by renderRecentEntries(): ultime piante classificate -->
+    </div>
+
+    <div class="note-field">
+      <textarea id="ril-note" placeholder="Note pianta (opzionale)…"></textarea>
+    </div>
   </div>
 
-  <div class="note-field">
-    <textarea id="ril-note" placeholder="Note pianta (opzionale)…"></textarea>
-  </div>
-
-  <div class="rilievo-nav">
-    <button class="nav-prev" onclick="prevPlant()">
-      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>
-      Annulla
+  <div class="rilievo-footer">
+    <div class="rilievo-nav">
+      <button class="nav-prev" onclick="prevPlant()">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>
+        Annulla
+      </button>
+      <button class="nav-next" onclick="nextFilare()">
+        Filare succ.
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg>
+      </button>
+    </div>
+    <button class="btn-complete" onclick="completeRilievo()">
+      <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M5 12l5 5L20 7"/></svg>
+      Termina rilievo
     </button>
-    <button class="nav-next" onclick="nextFilare()">
-      Filare succ.
-      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg>
-    </button>
   </div>
-  <button class="btn-complete" onclick="completeRilievo()">
-    <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M5 12l5 5L20 7"/></svg>
-    Termina rilievo
-  </button>
 </div>
 
 <!-- ══ DETTAGLIO RILIEVO ══ -->
@@ -1816,6 +1933,9 @@ body {
         <button onclick="syncClearAll()" style="width:100%;padding:11px;border-radius:10px;border:1.5px solid var(--scartare);background:#fff5f5;color:var(--scartare);font:700 14px -apple-system,sans-serif;cursor:pointer">
           🗑 Cancella tutti i dati
         </button>
+        <button onclick="logoutApp()" style="width:100%;padding:11px;border-radius:10px;border:1.5px solid var(--border);background:var(--surface-2);color:var(--text);font:700 14px -apple-system,sans-serif;cursor:pointer">
+          🔒 Esci (richiedi password al prossimo accesso)
+        </button>
       </div>
     </div>
 
@@ -1860,6 +1980,72 @@ body {
 <div id="toast"></div>
 
 <script>
+/* ═══════════════════ AUTH GATE ═══════════════════ */
+// Protezione base: password condivisa. NON è sicurezza forte (l'hash è comunque
+// leggibile nel sorgente e la logica gira lato client), serve solo a filtrare
+// l'accesso casuale. Per una vera autenticazione vedi Cloudflare Access.
+const AUTH_PW_HASH = '8b7ba091a168e6b83f78b8387b1118666764b85a125fcf3685c29a671790ea4e';
+const AUTH_STORAGE_KEY = 'vt_auth_ok';
+
+async function sha256Hex(str) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+function isAuthenticated() {
+  return localStorage.getItem(AUTH_STORAGE_KEY) === AUTH_PW_HASH;
+}
+
+function unlockApp() {
+  document.getElementById('login-gate').style.display = 'none';
+}
+
+function logoutApp() {
+  localStorage.removeItem(AUTH_STORAGE_KEY);
+  location.reload();
+}
+
+async function attemptLogin() {
+  const input = document.getElementById('login-pw-input');
+  const errEl = document.getElementById('login-error');
+  const btn = document.getElementById('login-submit-btn');
+  const pw = input.value;
+  if (!pw) { errEl.textContent = 'Inserisci la password'; return; }
+  btn.disabled = true;
+  const hash = await sha256Hex(pw);
+  if (hash === AUTH_PW_HASH) {
+    localStorage.setItem(AUTH_STORAGE_KEY, hash); // resta valido finché non si cancellano i dati del browser
+    errEl.textContent = '';
+    unlockApp();
+  } else {
+    errEl.textContent = 'Password errata';
+    input.value = '';
+    input.focus();
+    btn.disabled = false;
+  }
+}
+
+(function initAuthGate() {
+  if (isAuthenticated()) {
+    document.addEventListener('DOMContentLoaded', unlockApp);
+  } else {
+    document.addEventListener('DOMContentLoaded', () => {
+      const input = document.getElementById('login-pw-input');
+      input.addEventListener('keydown', e => { if (e.key === 'Enter') attemptLogin(); });
+      input.focus();
+    });
+  }
+})();
+
+/* ═══════════════════ FEEDBACK APTICO ═══════════════════ */
+// Vibrazione breve di conferma pressione pulsante. Supportata su Chrome/Android;
+// su iOS Safari l'API non esiste e la chiamata viene semplicemente ignorata.
+function vibrate(pattern) {
+  try {
+    if (navigator.vibrate) navigator.vibrate(pattern);
+  } catch (e) { /* ignorato: nessun impatto sul funzionamento dell'app */ }
+}
+
 /* ═══════════════════ STATE ═══════════════════ */
 let vineyards = JSON.parse(localStorage.getItem('vt_vineyards') || '[]');
 let rilievi   = JSON.parse(localStorage.getItem('vt_rilievi')   || '[]');
@@ -2016,6 +2202,9 @@ function showPageInternal(pageId) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.getElementById(pageId).classList.add('active');
   currentPage = pageId;
+  // Schermata rilievo a tutto schermo: nasconde la bottom-nav principale
+  // e libera spazio per evitare sovrapposizioni tra i pulsanti.
+  document.body.classList.toggle('rilievo-fullscreen', pageId === 'page-rilievo');
 }
 
 function goBack() {
@@ -2419,6 +2608,7 @@ function updateRilievoUI() {
   } else {
     document.getElementById('ril-note').value = '';
   }
+  renderRecentEntries();
 }
 
 function setDir(dir) {
@@ -2492,6 +2682,7 @@ function classify(cls) {
   // Highlight button
   document.querySelectorAll('.classif-btn').forEach(b => b.classList.remove('selected'));
   event.currentTarget.classList.add('selected');
+  vibrate(15); // conferma tattile breve: pianta classificata
 
   // Auto-advance
   setTimeout(() => advancePlant(), 300);
@@ -2511,6 +2702,7 @@ function advancePlant() {
 
 function nextFilare() {
   if (!activeRilievo) return;
+  vibrate(20);
 
   // Se il filare appena concluso è stato rilevato "dal fondo", rimappa
   // le posizioni: la pianta più recente (sequenza più alta) diventa P001,
@@ -2549,6 +2741,7 @@ function nextFilare() {
 
 function prevPlant() {
   if (!activeRilievo) return;
+  vibrate([15,40,15]); // pattern doppio: distingue "annulla" dalla classificazione normale
   const plants = activeRilievo.plants;
   // Annulla l'ultima pianta classificata SOLO se appartiene al filare corrente,
   // così evitiamo di tornare in un filare già chiuso/rimappato.
@@ -2574,6 +2767,7 @@ function prevPlant() {
 function completeRilievo() {
   if (!activeRilievo) return;
   if (activeRilievo.plants.length === 0) { showToast('Nessuna pianta classificata'); return; }
+  vibrate([20,50,20,50,20]); // pattern più lungo: conferma chiusura rilievo
 
   // Se l'ultimo filare è stato rilevato "dal fondo" e l'agronomo
   // non ha premuto "Filare succ.", rimappiamo qui le sue posizioni.
@@ -4144,6 +4338,28 @@ function selectProtocol(id) {
 
 /* ── Apertura flusso nuovo rilievo ── */
 /* ── Rendering dinamico bottoni classificazione ── */
+/* ── Ultime immissioni: mostra le ultime piante classificate per verifica rapida ── */
+function renderRecentEntries() {
+  const box = document.getElementById('ril-recent');
+  if (!box || !activeRilievo) return;
+  const plants = activeRilievo.plants;
+  if (plants.length === 0) {
+    box.innerHTML = '<div class="ril-recent-empty">Nessuna pianta ancora classificata in questo rilievo</div>';
+    return;
+  }
+  // Ultime 6, più recente per prima (ordine di inserimento = ordine timestamp)
+  const recent = plants.slice(-6).reverse();
+  box.innerHTML = recent.map((p, i) => {
+    const color = clsColorForRilievo(p.classificazione, activeRilievo);
+    const codeShort = p.codice.split('-').slice(1).join('-'); // es. R02-P015, senza il prefisso vigneto
+    return `<div class="ril-recent-chip${i === 0 ? ' is-last' : ''}">
+      <span class="rc-dot" style="background:${color}"></span>
+      <span class="rc-code">${codeShort}</span>
+      <span class="rc-cls">${p.classificazione}</span>
+    </div>`;
+  }).join('');
+}
+
 function renderClassifButtons() {
   const grid = document.getElementById('classif-grid');
   if (!grid || !activeProtocol) return;
