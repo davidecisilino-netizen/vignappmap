@@ -14,6 +14,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Source+Serif+4:wght@400;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
 <style>
 :root {
   --bg:         #F5F2ED;
@@ -743,10 +744,39 @@ body.rilievo-fullscreen #bottom-nav { display: none; }
   background: #E8F5E0;
   position: relative;
 }
-#vineyard-map {
+/* Variante mappa reale (Leaflet): occupa tutto lo spazio verticale ancora
+   disponibile nella pagina, invece della piccola anteprima fissa precedente. */
+.map-canvas-wrap.gps-live {
+  height: calc(100dvh - 300px);
+  min-height: 360px;
+}
+#leaflet-map {
   width: 100%;
-  display: block;
-  cursor: crosshair;
+  height: 100%;
+  background: #E8F5E0;
+}
+/* Etichette dei controlli Leaflet (zoom, selezione tipo mappa) coerenti col tema app */
+.leaflet-control-layers, .leaflet-bar {
+  border-radius: 10px !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,.18) !important;
+  overflow: hidden;
+}
+.leaflet-control-layers-toggle {
+  width: 34px !important; height: 34px !important;
+}
+.map-empty-msg {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 0 30px;
+  font-size: 13px;
+  color: #7C8A72;
+  background: #E8F5E0;
+  z-index: 5;
+  pointer-events: none;
 }
 .map-legend {
   position: absolute;
@@ -1184,7 +1214,7 @@ body.rilievo-fullscreen #bottom-nav { display: none; }
 
 <!-- TOPBAR -->
 <div id="topbar">
-  <button id="back-btn" onclick="goBack()">
+  <button id="back-btn" onclick="handleBackButton()">
     <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>
     Indietro
   </button>
@@ -1525,6 +1555,12 @@ body.rilievo-fullscreen #bottom-nav { display: none; }
       <div class="rdh-stat"><div class="rdh-num" id="rd-problemi">—</div><div class="rdh-lbl">Problemi</div></div>
     </div>
   </div>
+  <div style="padding:12px 16px 0;">
+    <button class="btn-complete" id="rd-resume-btn" style="display:none;width:100%;margin:0 0 10px;" onclick="resumeRilievo(currentRilievodId)">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M5 3l14 9-14 9V3z"/></svg>
+      Riprendi rilievo
+    </button>
+  </div>
   <div style="padding:12px 16px; display:flex; gap:8px;">
     <button class="btn-secondary" style="flex:1;" onclick="exportRilievoCsv()">
       <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
@@ -1551,11 +1587,10 @@ body.rilievo-fullscreen #bottom-nav { display: none; }
     </select>
   </div>
 
-  <!-- Tab bar: Punti GPS / Schema filari / Satellite -->
+  <!-- Tab bar: Punti GPS / Schema filari -->
   <div class="map-tab-bar">
     <div class="map-tab active" id="tab-gps"      onclick="switchMapTab('gps')">Punti GPS</div>
     <div class="map-tab"        id="tab-schema"   onclick="switchMapTab('schema')">Schema filari</div>
-    <div class="map-tab"        id="tab-satellite" onclick="switchMapTab('satellite')">Satellite</div>
   </div>
 
   <!-- Filter chips (shown for GPS and Schema) -->
@@ -1567,13 +1602,11 @@ body.rilievo-fullscreen #bottom-nav { display: none; }
     <div class="map-chip" onclick="setMapFilter(this,'Morta')"><div class="cdot" style="background:var(--morta)"></div>Morte</div>
   </div>
 
-  <!-- TAB 1: Punti GPS (original SVG map) -->
+  <!-- TAB 1: Punti GPS — mappa reale interattiva (Leaflet), zoomabile, stradale/satellite -->
   <div id="map-tab-gps">
-    <div class="map-canvas-wrap">
-      <svg id="vineyard-map" viewBox="0 0 340 300" xmlns="http://www.w3.org/2000/svg">
-        <rect width="340" height="300" fill="#E8F5E0"/>
-        <text x="170" y="155" text-anchor="middle" font-size="13" fill="#9A958C">Seleziona un rilievo</text>
-      </svg>
+    <div class="map-canvas-wrap gps-live" id="gps-map-wrap">
+      <div id="leaflet-map"></div>
+      <div class="map-empty-msg" id="gps-map-empty">Seleziona un rilievo</div>
       <div class="map-legend">
         <div class="ml-row"><div class="ml-dot" style="background:var(--sana)"></div>Sana</div>
         <div class="ml-row"><div class="ml-dot" style="background:var(--scartare)"></div>Da scartare</div>
@@ -1603,27 +1636,6 @@ body.rilievo-fullscreen #bottom-nav { display: none; }
       <div class="sl-item"><div class="sl-dot" style="background:var(--norilevata)"></div>N/R</div>
     </div>
     <div style="padding:2px 16px 6px;font-size:11px;color:var(--text-soft)">Tocca una vite per il dettaglio · ogni riga = un filare · pianta 1 a sinistra</div>
-  </div>
-
-  <!-- TAB 3: Satellite -->
-  <div id="map-tab-satellite" style="display:none">
-    <div style="margin:0 16px 8px;padding:12px 14px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);font-size:12px;color:var(--text-mid)">
-      La mappa satellitare si apre in Google Maps centrata sulle coordinate del vigneto selezionato.
-      <div id="sat-coords-info" style="margin-top:6px;font-family:var(--font-mono);font-size:11px;color:var(--text-soft)"></div>
-    </div>
-    <div style="padding:0 16px 8px;display:flex;flex-direction:column;gap:8px">
-      <button id="btn-open-gmaps" onclick="openGoogleMaps()" style="background:var(--vine);color:#fff;border:none;border-radius:10px;padding:13px 18px;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px">
-        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M12 2a9 9 0 0 1 9 9c0 4.17-2.84 7.67-6.75 8.68L12 22l-2.25-2.32C5.84 18.67 3 15.17 3 11a9 9 0 0 1 9-9z"/><circle cx="12" cy="11" r="3"/></svg>
-        Apri in Google Maps Satellite
-      </button>
-      <button onclick="openGoogleEarth()" style="background:var(--surface);color:var(--vine);border:1.5px solid var(--vine-light);border-radius:10px;padding:11px 18px;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px">
-        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
-        Apri in Google Earth
-      </button>
-      <div style="font-size:11px;color:var(--text-soft);text-align:center">
-        Per i vigneti senza coordinate GPS, viene aperto il centro dell'Italia come posizione di default
-      </div>
-    </div>
   </div>
 
   <div class="map-info-panel" id="map-info-panel">
@@ -1979,6 +1991,7 @@ body.rilievo-fullscreen #bottom-nav { display: none; }
 <!-- TOAST -->
 <div id="toast"></div>
 
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 <script>
 /* ═══════════════════ AUTH GATE ═══════════════════ */
 // Protezione base: password condivisa. NON è sicurezza forte (l'hash è comunque
@@ -2174,7 +2187,7 @@ function navTo(pageId) {
   document.getElementById('topbar-logo').style.display = '';
   document.getElementById('topbar-title').style.display = 'none';
   window.scrollTo(0,0);
-  if (pageId === 'page-maps') { renderMap(); if(activeMapTab==='schema') renderSchemaMap(); if(activeMapTab==='satellite') updateSatelliteInfo(); }
+  if (pageId === 'page-maps') { renderMap(); if(activeMapTab==='schema') renderSchemaMap(); }
   if (pageId === 'page-stats') renderStats();
   if (pageId === 'page-vineyards') renderVineyards();
   if (pageId === 'page-home') renderHome();
@@ -2764,6 +2777,91 @@ function prevPlant() {
   updateRilievoUI();
 }
 
+/* ═══════════════════ SALVA / RIPRENDI / USCITA RILIEVO ═══════════════════ */
+
+// Salva lo stato corrente del rilievo (piante già classificate + punto in cui si è
+// arrivati) come "in corso", così può essere ripreso in seguito da dove si era rimasti.
+function persistRilievoProgress() {
+  if (!activeRilievo) return;
+  activeRilievo.status = 'in_corso';
+  activeRilievo._progress = { filare: currentFilare, pianta: currentPianta, dir: currentDir };
+  const idx = rilievi.findIndex(r => r.id === activeRilievo.id);
+  if (idx >= 0) rilievi[idx] = activeRilievo; else rilievi.push(activeRilievo);
+  saveData();
+}
+
+// Riprende un rilievo "in corso" esattamente da dove era stato interrotto:
+// stesso filare/pianta/direzione e stesso protocollo di classificazione.
+function resumeRilievo(id) {
+  const r = rilievi.find(x => x.id === id);
+  if (!r || r.status !== 'in_corso') return;
+  activeRilievo = r;
+  if (r.protocollo) {
+    activeProtocol = {
+      id: r.protocollo.id,
+      name: r.protocollo.name,
+      desc: r.protocollo.desc || '',
+      classes: r.protocollo.classes.map(c => ({...c}))
+    };
+  }
+  const prog = r._progress || {};
+  currentFilare = prog.filare || 1;
+  currentPianta = prog.pianta || 1;
+  currentDir = prog.dir || 'from';
+
+  const _spw = document.getElementById('start-pos-wrap');
+  if (_spw) _spw.style.display = 'none';
+  document.getElementById('dir-from').classList.toggle('active', currentDir === 'from');
+  document.getElementById('dir-to').classList.toggle('active', currentDir === 'to');
+
+  const banner = document.getElementById('ril-protocol-banner');
+  if (banner) {
+    banner.style.display = activeProtocol.id === 'standard' ? 'none' : '';
+    document.getElementById('ril-proto-name').textContent = activeProtocol.name;
+    document.getElementById('ril-proto-desc').textContent = activeProtocol.desc || '';
+  }
+
+  renderClassifButtons();
+  updateRilievoUI();
+  startGPS();
+  showPage('page-rilievo', r.vineyardName);
+  document.querySelectorAll('.classif-btn').forEach(b => b.classList.remove('selected'));
+  document.getElementById('ril-note').value = '';
+  showToast(`Rilievo ripreso: ${r.plants.length} piante già registrate`);
+}
+
+// Intercetta il pulsante "Indietro" della topbar: durante un rilievo attivo chiede
+// conferma invece di uscire subito, per evitare di perdere dati per errore.
+function handleBackButton() {
+  if (currentPage === 'page-rilievo' && activeRilievo) {
+    document.getElementById('exit-rilievo-modal').classList.add('open');
+    return;
+  }
+  goBack();
+}
+
+function closeExitRilievoModal() {
+  document.getElementById('exit-rilievo-modal').classList.remove('open');
+}
+
+function exitRilievoSaveAndClose() {
+  closeExitRilievoModal();
+  if (!activeRilievo) { goBack(); return; }
+  persistRilievoProgress();
+  stopGPS();
+  showToast('Rilievo salvato — riprendilo da "Rilievi" quando vuoi');
+  activeRilievo = null;
+  renderHome();
+  goBack();
+}
+
+function exitRilievoDiscard() {
+  closeExitRilievoModal();
+  stopGPS();
+  activeRilievo = null;
+  goBack();
+}
+
 function completeRilievo() {
   if (!activeRilievo) return;
   if (activeRilievo.plants.length === 0) { showToast('Nessuna pianta classificata'); return; }
@@ -2882,6 +2980,8 @@ function openRilievo(id) {
     html += '</div>';
   });
   document.getElementById('rd-plant-grid').innerHTML = html;
+  const resumeBtn = document.getElementById('rd-resume-btn');
+  if (resumeBtn) resumeBtn.style.display = (r.status === 'in_corso') ? 'flex' : 'none';
   showPage('page-rilievo-detail', r.vineyardName);
 }
 
@@ -2959,65 +3059,90 @@ function setMapFilter(el, filter) {
   else renderMap();
 }
 
+/* ═══════════════════ MAPPA REALE (Leaflet) — Punti GPS ═══════════════════ */
+let leafletMap = null;
+let leafletBaseStreet = null;
+let leafletBaseSat = null;
+let leafletMarkersLayer = null;
+
+function initLeafletMap() {
+  if (leafletMap) return; // già inizializzata
+  if (typeof L === 'undefined') return; // libreria non ancora caricata (nessuna rete al primo avvio)
+  const mapDiv = document.getElementById('leaflet-map');
+  if (!mapDiv) return;
+
+  leafletBaseStreet = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 20,
+    attribution: '© OpenStreetMap contributors'
+  });
+  leafletBaseSat = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+    maxZoom: 19,
+    attribution: 'Tiles © Esri'
+  });
+
+  leafletMap = L.map(mapDiv, {
+    center: [46.05, 13.23], // Friuli Venezia Giulia, default prima di selezionare un rilievo
+    zoom: 9,
+    layers: [leafletBaseStreet]
+  });
+
+  L.control.layers(
+    { 'Stradale': leafletBaseStreet, 'Satellite': leafletBaseSat },
+    null,
+    { position: 'topright', collapsed: true }
+  ).addTo(leafletMap);
+
+  leafletMarkersLayer = L.layerGroup().addTo(leafletMap);
+}
+
 function renderMap() {
   const rilId = document.getElementById('map-rilievo-sel').value;
-  const svg = document.getElementById('vineyard-map');
+  const emptyMsg = document.getElementById('gps-map-empty');
   const panel = document.getElementById('map-info-panel');
   panel.classList.remove('visible');
 
+  initLeafletMap();
+  if (!leafletMap) return; // Leaflet non disponibile (nessuna connessione al primo caricamento)
+  leafletMarkersLayer.clearLayers();
+
   if (!rilId) {
-    svg.innerHTML = `<rect width="340" height="300" fill="#E8F5E0"/><text x="170" y="155" text-anchor="middle" font-size="13" fill="#9A958C">Seleziona un rilievo</text>`;
+    emptyMsg.innerHTML = 'Seleziona un rilievo';
+    emptyMsg.style.display = 'flex';
+    setTimeout(() => leafletMap.invalidateSize(), 60);
     return;
   }
   const r = rilievi.find(x => x.id === rilId);
-  if (!r) return;
+  if (!r) { emptyMsg.style.display = 'flex'; return; }
 
-  // Build color map from rilievo's protocol (fallback to standard)
   const colorMap = _getColorMapForRilievo(r);
-
   const plantsWithGPS = r.plants.filter(p => p.lat && p.lon);
+  const filtered = mapFilter === 'all' ? plantsWithGPS : plantsWithGPS.filter(p => p.classificazione === mapFilter);
 
-  if (plantsWithGPS.length > 0) {
-    const lats = plantsWithGPS.map(p => p.lat);
-    const lons = plantsWithGPS.map(p => p.lon);
-    const minLat = Math.min(...lats), maxLat = Math.max(...lats);
-    const minLon = Math.min(...lons), maxLon = Math.max(...lons);
-    const pad = 16, W = 340, H = 300;
-    const toX = lon => pad + (lon - minLon) / (maxLon - minLon || 1) * (W - 2*pad);
-    const toY = lat => H - pad - (lat - minLat) / (maxLat - minLat || 1) * (H - 2*pad);
-
-    const filtered = mapFilter === 'all' ? plantsWithGPS : plantsWithGPS.filter(p => p.classificazione === mapFilter);
-    let dots = filtered.map(p => {
-      const x = toX(p.lon), y = toY(p.lat);
-      const c = colorMap[p.classificazione] || '#aaa';
-      return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="4.5" fill="${c}" stroke="white" stroke-width="1" style="cursor:pointer" onclick='showMapInfo(${JSON.stringify(p).replace(/'/g,"&#39;")}, "${rilId}")'/>`;
-    }).join('');
-
-    svg.innerHTML = `<rect width="340" height="300" fill="#E8F5E0"/>
-      <text x="6" y="14" font-size="9" fill="#9A958C">${r.vineyardName} · ${r.date}</text>
-      <text x="6" y="24" font-size="8" fill="#B8B0A4">${plantsWithGPS.length} piante georeferenziate</text>
-      ${dots}`;
+  if (plantsWithGPS.length === 0) {
+    emptyMsg.innerHTML = 'Nessun punto GPS disponibile per questo rilievo<br><span style="font-size:11px;opacity:.8">Le piante sono state registrate senza coordinate</span>';
+    emptyMsg.style.display = 'flex';
   } else {
-    const v = vineyards.find(x => x.id === r.vineyardId);
-    const nFilari = v ? v.filari : 8;
-    const nPiante = v && v.piantaPerFilare ? v.piantaPerFilare : Math.max(...r.plants.map(p => p.posizione), 10);
-    const W = 340, H = 300, pad = 24;
-    const cellW = (W - 2*pad) / Math.min(nPiante, 40);
-    const cellH = (H - 2*pad) / nFilari;
-    const r_size = Math.min(cellW, cellH) * 0.4;
-    let dots = '';
-    const filtered = mapFilter === 'all' ? r.plants : r.plants.filter(p => p.classificazione === mapFilter);
+    emptyMsg.style.display = 'none';
+    const bounds = [];
     filtered.forEach(p => {
-      const piShow = Math.min(p.posizione, 40);
-      const x = pad + (piShow - 0.5) * cellW;
-      const y = pad + (p.filare - 0.5) * cellH;
-      const c = colorMap[p.classificazione] || '#aaa';
-      dots += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${r_size.toFixed(1)}" fill="${c}" stroke="white" stroke-width=".8" style="cursor:pointer" onclick='showMapInfo(${JSON.stringify(p).replace(/'/g,"&#39;")}, "${rilId}")'/>`;
+      const col = colorMap[p.classificazione] || '#999';
+      const marker = L.circleMarker([p.lat, p.lon], {
+        radius: 7,
+        fillColor: col,
+        color: '#fff',
+        weight: 1.5,
+        fillOpacity: 0.95
+      }).addTo(leafletMarkersLayer);
+      marker.on('click', () => showMapInfo(p, rilId));
+      bounds.push([p.lat, p.lon]);
     });
-    svg.innerHTML = `<rect width="340" height="300" fill="#E8F5E0"/>
-      <text x="170" y="14" text-anchor="middle" font-size="9" fill="#9A958C">Schema filari (senza GPS)</text>
-      ${dots}`;
+    if (bounds.length === 1) {
+      leafletMap.setView(bounds[0], 19);
+    } else if (bounds.length > 1) {
+      leafletMap.fitBounds(bounds, { padding: [30, 30], maxZoom: 19 });
+    }
   }
+  setTimeout(() => leafletMap.invalidateSize(), 60);
 }
 
 function showMapInfo(p, rilId) {
@@ -3411,15 +3536,13 @@ let activeMapTab = 'gps';
 
 function switchMapTab(tab) {
   activeMapTab = tab;
-  ['gps','schema','satellite'].forEach(t => {
+  ['gps','schema'].forEach(t => {
     document.getElementById('map-tab-' + t).style.display = t === tab ? '' : 'none';
     document.getElementById('tab-' + t).classList.toggle('active', t === tab);
   });
-  // Show/hide filter chips
-  document.getElementById('map-legend-chips').style.display = (tab === 'satellite') ? 'none' : '';
-  if (tab === 'gps') renderMap();
+  document.getElementById('map-legend-chips').style.display = '';
+  if (tab === 'gps') { renderMap(); if (leafletMap) setTimeout(() => leafletMap.invalidateSize(), 60); }
   if (tab === 'schema') renderSchemaMap();
-  if (tab === 'satellite') updateSatelliteInfo();
 }
 
 function onMapRilievoChange() {
@@ -3429,7 +3552,6 @@ function onMapRilievoChange() {
   _rebuildMapChipsAndLegend(r);
   renderMap();
   if (activeMapTab === 'schema') renderSchemaMap();
-  if (activeMapTab === 'satellite') updateSatelliteInfo();
 }
 
 /* ── Rebuild filter chips + GPS legend + Schema legend from rilievo protocol ── */
@@ -3983,61 +4105,6 @@ function exportCampioniCsv() {
 }
 
 /* ══════ SATELLITE / GOOGLE MAPS ══════ */
-function updateSatelliteInfo() {
-  const rilId = document.getElementById('map-rilievo-sel').value;
-  const infoEl = document.getElementById('sat-coords-info');
-  if (!rilId) { infoEl.textContent = ''; return; }
-  const r = rilievi.find(x => x.id === rilId);
-  if (!r) return;
-  const v = vineyards.find(x => x.id === r.vineyardId);
-  // Try to get coords from vineyard, then from GPS plants
-  let lat = v && v.lat ? v.lat : null;
-  let lon = v && v.lon ? v.lon : null;
-  if (!lat) {
-    const gpsPlants = r.plants.filter(p => p.lat && p.lon);
-    if (gpsPlants.length > 0) {
-      lat = gpsPlants.reduce((s,p) => s + p.lat, 0) / gpsPlants.length;
-      lon = gpsPlants.reduce((s,p) => s + p.lon, 0) / gpsPlants.length;
-    }
-  }
-  if (lat && lon) {
-    infoEl.textContent = 'Centro: ' + lat.toFixed(6) + ', ' + lon.toFixed(6);
-  } else {
-    infoEl.textContent = 'Nessuna coordinata GPS disponibile per questo vigneto';
-  }
-}
-
-function getSatCoords() {
-  const rilId = document.getElementById('map-rilievo-sel').value;
-  if (!rilId) return null;
-  const r = rilievi.find(x => x.id === rilId);
-  if (!r) return null;
-  const v = vineyards.find(x => x.id === r.vineyardId);
-  let lat = v && v.lat ? v.lat : null;
-  let lon = v && v.lon ? v.lon : null;
-  if (!lat) {
-    const gps = r.plants.filter(p => p.lat && p.lon);
-    if (gps.length > 0) {
-      lat = gps.reduce((s,p) => s + p.lat, 0) / gps.length;
-      lon = gps.reduce((s,p) => s + p.lon, 0) / gps.length;
-    }
-  }
-  return (lat && lon) ? {lat, lon} : {lat: 42.5, lon: 12.5}; // Italy center fallback
-}
-
-function openGoogleMaps() {
-  const c = getSatCoords();
-  // Open in satellite mode, centered on vineyard, zoom 18
-  const url = 'https://www.google.com/maps/@' + c.lat + ',' + c.lon + ',18z/data=!3m1!1e3';
-  window.open(url, '_blank');
-}
-
-function openGoogleEarth() {
-  const c = getSatCoords();
-  const url = 'https://earth.google.com/web/@' + c.lat + ',' + c.lon + ',200a,800d,35y,0h,45t,0r';
-  window.open(url, '_blank');
-}
-
 /* Override setMapFilter to also redraw schema */
 const _origSetMapFilter = typeof setMapFilter === 'function' ? setMapFilter : null;
 
@@ -4988,6 +5055,30 @@ function syncClearAll() {
 </div>
 
 <!-- ══ MODAL NUOVA VARIETÀ ══ -->
+<!-- MODAL CONFERMA USCITA DAL RILIEVO -->
+<div class="modal-overlay" id="exit-rilievo-modal">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Uscire dal rilievo?</div>
+    <p style="font-size:13px;color:var(--text-soft);margin:-6px 0 18px;line-height:1.5">
+      Il rilievo è ancora in corso. Puoi salvarlo e riprenderlo più tardi da dove sei rimasto,
+      oppure uscire senza salvare le piante classificate finora.
+    </p>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <button class="btn-primary" style="background:#1E5C2E" onclick="exitRilievoSaveAndClose()">
+        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+        Salva e continua dopo
+      </button>
+      <button class="btn-secondary" style="color:var(--scartare);border-color:var(--scartare)" onclick="exitRilievoDiscard()">
+        Esci senza salvare
+      </button>
+      <button class="btn-secondary" onclick="closeExitRilievoModal()">
+        Annulla, continua il rilievo
+      </button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="add-varieta-modal">
   <div class="modal-box" style="max-width:340px">
     <div class="modal-header">
