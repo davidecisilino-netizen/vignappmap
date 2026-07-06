@@ -2,7 +2,7 @@
   "name": "VignApp Map",
   "short_name": "VignApp Map",
   "description": "Rilievi di campo per agronomi - vigneti",
-  "start_url": "./VignApp_Map_v5_6.html",
+  "start_url": "./VignApp_Map_v5_7.html",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
