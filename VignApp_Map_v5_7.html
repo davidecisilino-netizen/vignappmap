@@ -1033,6 +1033,33 @@ body.rilievo-fullscreen #bottom-nav { display: none; }
 .modal-actions { display: flex; gap: 10px; }
 .modal-actions button { flex: 1; padding: 13px; }
 
+/* ── Stepper "da quale filare inizi" ── */
+.sf-stepper { display: flex; align-items: center; justify-content: center; gap: 14px; margin: 4px 0 14px; }
+.sf-step-btn {
+  flex: 0 0 auto; width: 54px; height: 54px; border-radius: 50%;
+  border: none; background: var(--vine-light, #E3EEDF); color: var(--vine, #1E5C2E);
+  font-size: 28px; font-weight: 700; line-height: 1; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  -webkit-tap-highlight-color: transparent; user-select: none;
+}
+.sf-step-btn:active { transform: scale(0.94); background: var(--vine-mid, #C9DEC2); }
+.sf-value-wrap { flex: 1 1 auto; max-width: 140px; text-align: center; }
+.sf-value-wrap input {
+  width: 100%; border: none; background: transparent; outline: none;
+  text-align: center; font-size: 40px; font-weight: 800; color: var(--text);
+  -moz-appearance: textfield;
+}
+.sf-value-wrap input::-webkit-outer-spin-button,
+.sf-value-wrap input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.sf-value-label { font-size: 11px; color: var(--text-soft); text-transform: uppercase; letter-spacing: .5px; margin-top: 2px; }
+.sf-quick-row { display: flex; gap: 8px; justify-content: center; margin: 0 0 18px; }
+.sf-quick-btn {
+  border: 1.5px solid var(--border); background: var(--surface); color: var(--text-mid);
+  border-radius: 99px; padding: 7px 14px; font-size: 12px; font-weight: 600; cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.sf-quick-btn:active { background: var(--vine-light, #E3EEDF); }
+
 /* Filare header in detail */
 .filare-header {
   padding: 10px 16px 4px;
@@ -2632,8 +2659,31 @@ function openStartFilareModal(vineyardId) {
   _pendingStartVineyardId = vineyardId;
   const input = document.getElementById('sf-filare-input');
   if (input) input.value = 1;
+  // Niente focus/select automatico: su Android farebbe comparire subito la
+  // tastiera, oscurando il numero appena impostato. L'utente può usare i
+  // pulsanti +/− oppure toccare il campo per digitare un valore preciso.
   document.getElementById('start-filare-modal').classList.add('open');
-  setTimeout(() => { if (input) { input.focus(); input.select(); } }, 50);
+}
+
+function stepStartFilare(delta) {
+  const input = document.getElementById('sf-filare-input');
+  if (!input) return;
+  let v = parseInt(input.value, 10);
+  if (!Number.isFinite(v)) v = 1;
+  v = Math.max(1, v + delta);
+  input.value = v;
+}
+
+function setStartFilareValue(v) {
+  const input = document.getElementById('sf-filare-input');
+  if (input) input.value = v;
+}
+
+function clampStartFilareInput() {
+  const input = document.getElementById('sf-filare-input');
+  if (!input) return;
+  const v = parseInt(input.value, 10);
+  input.value = (Number.isFinite(v) && v >= 1) ? v : 1;
 }
 
 function closeStartFilareModal() {
@@ -5091,30 +5141,35 @@ function syncClearAll() {
 </div>
 
 <div class="modal-overlay" id="start-filare-modal">
-  <div class="modal-box" style="max-width:340px">
-    <div class="modal-header">
-      <div class="modal-title">Da quale filare inizi?</div>
-      <button class="modal-close" onclick="closeStartFilareModal()">×</button>
-    </div>
-    <div style="padding:16px">
-      <p style="font-size:12px;color:var(--text-soft);margin:-2px 0 14px;line-height:1.5">
-        Per default il primo filare rilevato è il n. 1. Se stai mappando un intervallo diverso
-        (es. filari dal 20 al 24), indica qui il numero del <b>primo</b> filare: i successivi
-        aumenteranno in automatico (21, 22, 23…) premendo “Filare succ.”.
-      </p>
-      <div class="form-group" style="margin-bottom:14px">
-        <label style="font-size:11px;font-weight:700;color:var(--text-soft);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:5px">Numero primo filare</label>
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Da quale filare inizi?</div>
+    <p style="font-size:12px;color:var(--text-soft);margin:-8px 0 16px;line-height:1.5">
+      Di default il primo filare rilevato è il n. 1. Se stai mappando un intervallo diverso
+      (es. filari dal 20 al 24), imposta qui il numero del <b>primo</b> filare: i successivi
+      aumenteranno in automatico (21, 22, 23…) premendo “Filare succ.”.
+    </p>
+    <div class="sf-stepper">
+      <button type="button" class="sf-step-btn" onclick="stepStartFilare(-1)" aria-label="Diminuisci">−</button>
+      <div class="sf-value-wrap">
         <input type="number" id="sf-filare-input" min="1" step="1" value="1" inputmode="numeric"
-          style="width:100%;border:1.5px solid var(--border);border-radius:10px;padding:11px 12px;font-size:14px;background:var(--surface);color:var(--text);outline:none"
-          onkeydown="if(event.key==='Enter')confirmStartFilare()">
+          onkeydown="if(event.key==='Enter'){this.blur();confirmStartFilare();}"
+          onchange="clampStartFilareInput()">
+        <div class="sf-value-label">Numero filare</div>
       </div>
-      <div style="display:flex;gap:10px">
-        <button class="btn-secondary" style="flex:1" onclick="closeStartFilareModal()">Annulla</button>
-        <button class="btn-primary" style="flex:2;background:#1E5C2E" onclick="confirmStartFilare()">
-          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M5 12l5 5L20 7"/></svg>
-          Inizia rilievo
-        </button>
-      </div>
+      <button type="button" class="sf-step-btn" onclick="stepStartFilare(1)" aria-label="Aumenta">+</button>
+    </div>
+    <div class="sf-quick-row">
+      <button type="button" class="sf-quick-btn" onclick="setStartFilareValue(1)">Riparti da 1</button>
+      <button type="button" class="sf-quick-btn" onclick="stepStartFilare(-5)">−5</button>
+      <button type="button" class="sf-quick-btn" onclick="stepStartFilare(5)">+5</button>
+    </div>
+    <div style="display:flex;gap:10px">
+      <button class="btn-secondary" style="flex:1" onclick="closeStartFilareModal()">Annulla</button>
+      <button class="btn-primary" style="flex:2;background:#1E5C2E" onclick="confirmStartFilare()">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M5 12l5 5L20 7"/></svg>
+        Inizia rilievo
+      </button>
     </div>
   </div>
 </div>

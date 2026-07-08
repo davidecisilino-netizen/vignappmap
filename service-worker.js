@@ -2,7 +2,7 @@
 // Scopo: 1) rendere l'app installabile (PWA) 2) farla funzionare anche senza rete in vigna,
 // dato che i dati veri restano su localStorage/IndexedDB nel browser, non qui.
 
-const CACHE_NAME = 'vignaapp-v3';
+const CACHE_NAME = 'vignaapp-v4';
 const APP_SHELL = [
   './VignApp_Map_v5_7.html',
   './manifest.json',
