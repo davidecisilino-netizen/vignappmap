@@ -2608,7 +2608,7 @@ function renderSelectVineyardList() {
     const last  = vr.slice().sort((a,b) => b.date.localeCompare(a.date))[0];
     const meta  = [v.azienda, v.loc, v.varieta].filter(Boolean).join(' · ');
     const lastInfo = last ? 'Ultimo rilievo: ' + last.date + ' (' + last.plants.length + ' piante)' : 'Nessun rilievo ancora';
-    return '<div class="vineyard-card" onclick="initRilievo(\'' + v.id + '\')">' +
+    return '<div class="vineyard-card" onclick="openStartFilareModal(\'' + v.id + '\')">' +
       '<div class="vineyard-card-body">' +
         '<div class="vc-strip" style="background:var(--vine)"></div>' +
         '<div class="vc-inner">' +
@@ -2624,7 +2624,34 @@ function renderSelectVineyardList() {
   }).join('');
 }
 
-function initRilievo(vineyardId) {
+// Vigneto selezionato in attesa di conferma del filare di partenza
+// (mostrato dalla modale "Da quale filare inizi?")
+let _pendingStartVineyardId = null;
+
+function openStartFilareModal(vineyardId) {
+  _pendingStartVineyardId = vineyardId;
+  const input = document.getElementById('sf-filare-input');
+  if (input) input.value = 1;
+  document.getElementById('start-filare-modal').classList.add('open');
+  setTimeout(() => { if (input) { input.focus(); input.select(); } }, 50);
+}
+
+function closeStartFilareModal() {
+  document.getElementById('start-filare-modal').classList.remove('open');
+  _pendingStartVineyardId = null;
+}
+
+function confirmStartFilare() {
+  if (!_pendingStartVineyardId) return;
+  const raw = parseInt(document.getElementById('sf-filare-input').value, 10);
+  const startFilare = (Number.isFinite(raw) && raw >= 1) ? raw : 1;
+  const vineyardId = _pendingStartVineyardId;
+  document.getElementById('start-filare-modal').classList.remove('open');
+  _pendingStartVineyardId = null;
+  initRilievo(vineyardId, startFilare);
+}
+
+function initRilievo(vineyardId, startFilare) {
   const v = vineyards.find(x => x.id === vineyardId);
   if (!v) return;
   const vPrefix = v.prefix || (function(){
@@ -2649,7 +2676,12 @@ function initRilievo(vineyardId) {
       classes: activeProtocol.classes.map(c => ({...c}))
     }
   };
-  currentFilare = 1;
+  // Numero del primo filare: di default 1, ma l'utente puo' impostarlo
+  // diversamente (es. per mappare un range di filari 20-24) dalla modale
+  // mostrata prima dell'avvio del rilievo. I filari successivi continuano
+  // sempre in automatico (+1 ad ogni "Filare succ.").
+  const n = parseInt(startFilare, 10);
+  currentFilare = (Number.isFinite(n) && n >= 1) ? n : 1;
   currentPianta = 1;
   currentDir = 'from';
   const _spw = document.getElementById('start-pos-wrap');
@@ -3631,7 +3663,7 @@ function savePlantNoteOnly() {
 
 /* ══════ Modal close on backdrop click ══════ */
 document.addEventListener('DOMContentLoaded', function() {
-  var modals = ['ril-info-modal', 'plant-edit-modal', 'smp-detail-modal'];
+  var modals = ['ril-info-modal', 'plant-edit-modal', 'smp-detail-modal', 'start-filare-modal'];
   modals.forEach(function(id) {
     var m = document.getElementById(id);
     if (m) m.addEventListener('click', function(e) { if (e.target === e.currentTarget) m.classList.remove('open'); });
@@ -4351,7 +4383,7 @@ function selectProtocol(id) {
     const vid = window._pendingVineyardId;
     window._pendingVineyardId = null;
     goBack();
-    initRilievo(vid);
+    openStartFilareModal(vid);
     return;
   }
   // Otherwise continue with vineyard selection
@@ -4529,7 +4561,7 @@ function saveAndUseCustomProtocol() {
   activeProtocol = proto;
   if (window._pendingVineyardId) {
     const vid = window._pendingVineyardId; window._pendingVineyardId = null;
-    goBack(); goBack(); initRilievo(vid); return;
+    goBack(); goBack(); openStartFilareModal(vid); return;
   }
   goBack(); goBack(); startRilievoAfterProtocol();
 }
@@ -4557,7 +4589,7 @@ function saveCustomProtocolToLibrary() {
     showToast('Protocollo salvato in libreria');
     if (window._pendingVineyardId) {
       const vid = window._pendingVineyardId; window._pendingVineyardId = null;
-      goBack(); goBack(); initRilievo(vid); return;
+      goBack(); goBack(); openStartFilareModal(vid); return;
     }
     goBack(); goBack(); startRilievoAfterProtocol();
   }
@@ -5054,6 +5086,35 @@ function syncClearAll() {
       <button class="btn-secondary" onclick="closeExitRilievoModal()">
         Annulla, continua il rilievo
       </button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="start-filare-modal">
+  <div class="modal-box" style="max-width:340px">
+    <div class="modal-header">
+      <div class="modal-title">Da quale filare inizi?</div>
+      <button class="modal-close" onclick="closeStartFilareModal()">×</button>
+    </div>
+    <div style="padding:16px">
+      <p style="font-size:12px;color:var(--text-soft);margin:-2px 0 14px;line-height:1.5">
+        Per default il primo filare rilevato è il n. 1. Se stai mappando un intervallo diverso
+        (es. filari dal 20 al 24), indica qui il numero del <b>primo</b> filare: i successivi
+        aumenteranno in automatico (21, 22, 23…) premendo “Filare succ.”.
+      </p>
+      <div class="form-group" style="margin-bottom:14px">
+        <label style="font-size:11px;font-weight:700;color:var(--text-soft);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:5px">Numero primo filare</label>
+        <input type="number" id="sf-filare-input" min="1" step="1" value="1" inputmode="numeric"
+          style="width:100%;border:1.5px solid var(--border);border-radius:10px;padding:11px 12px;font-size:14px;background:var(--surface);color:var(--text);outline:none"
+          onkeydown="if(event.key==='Enter')confirmStartFilare()">
+      </div>
+      <div style="display:flex;gap:10px">
+        <button class="btn-secondary" style="flex:1" onclick="closeStartFilareModal()">Annulla</button>
+        <button class="btn-primary" style="flex:2;background:#1E5C2E" onclick="confirmStartFilare()">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M5 12l5 5L20 7"/></svg>
+          Inizia rilievo
+        </button>
+      </div>
     </div>
   </div>
 </div>
