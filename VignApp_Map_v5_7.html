@@ -1400,10 +1400,16 @@ body.rilievo-fullscreen #bottom-nav { display: none; }
 <div class="page" id="page-vineyards">
   <div class="list-header">
     <h2>Vigneti</h2>
-    <button class="btn-primary" onclick="openNewVineyard()">
-      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
-      Nuovo
-    </button>
+    <div style="display:flex;gap:8px">
+      <button class="btn-secondary" onclick="openAziendeList()" style="padding:8px 12px">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 21h18M5 21V7l7-4 7 4v14M9 9h1m3 0h1m-5 4h1m3 0h1m-5 4h1m3 0h1"/></svg>
+        Aziende
+      </button>
+      <button class="btn-primary" onclick="openNewVineyard()">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+        Nuovo
+      </button>
+    </div>
   </div>
   <div class="riliev-sel" style="padding-top:0">
     <select id="vy-azienda-filter" onchange="renderVineyards()">
@@ -1413,13 +1419,84 @@ body.rilievo-fullscreen #bottom-nav { display: none; }
   <div class="vineyard-cards" id="vineyard-list"></div>
 </div>
 
+<!-- ══ ELENCO AZIENDE ══ -->
+<div class="page" id="page-aziende">
+  <div class="list-header">
+    <h2>Aziende</h2>
+    <button class="btn-primary" onclick="openNewAzienda(false)">
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+      Nuova
+    </button>
+  </div>
+  <div class="form-wrap" style="padding-bottom:0">
+    <input type="text" id="az-search" placeholder="Cerca azienda…" oninput="renderAziende()" style="margin-bottom:0">
+  </div>
+  <div class="vineyard-cards" id="azienda-list"></div>
+</div>
+
+<!-- ══ NUOVA / MODIFICA AZIENDA ══ -->
+<div class="page" id="page-new-azienda">
+  <div class="list-header"><h2 id="az-page-title">Nuova azienda</h2></div>
+  <div class="form-wrap">
+    <div class="form-group">
+      <label>Ragione sociale *</label>
+      <input type="text" id="az-nome" placeholder="Es. Az. Agr. Ronchi di Cialla">
+    </div>
+    <div class="form-group">
+      <label>P.IVA / C.F.</label>
+      <input type="text" id="az-piva" placeholder="Es. 01234567890">
+    </div>
+    <div class="form-group">
+      <label>Indirizzo</label>
+      <input type="text" id="az-indirizzo" placeholder="Es. Via Rocca 4">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Comune</label>
+        <input type="text" id="az-comune" placeholder="Es. Prepotto">
+      </div>
+      <div class="form-group">
+        <label>Prov.</label>
+        <input type="text" id="az-provincia" placeholder="UD" maxlength="2" style="text-transform:uppercase">
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Referente</label>
+      <input type="text" id="az-referente" placeholder="Nome del referente aziendale">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Telefono</label>
+        <input type="tel" id="az-telefono" placeholder="Es. 0432 123456">
+      </div>
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" id="az-email" placeholder="mail@azienda.it">
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Note</label>
+      <textarea id="az-note" placeholder="Annotazioni sull'azienda…"></textarea>
+    </div>
+    <div class="form-actions">
+      <button class="btn-secondary" id="az-delete-btn" onclick="deleteAzienda()" style="display:none;color:#c0392b">Elimina</button>
+      <button class="btn-primary-lg" style="flex:2;" id="az-save-btn" onclick="saveAzienda()">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M5 12l5 5L20 7"/></svg>
+        <span id="az-save-lbl">Crea azienda</span>
+      </button>
+    </div>
+  </div>
+</div>
+
 <!-- ══ NUOVO / MODIFICA VIGNETO ══ -->
 <div class="page" id="page-new-vineyard">
   <div class="list-header"><h2 id="nv-page-title">Nuovo vigneto</h2></div>
   <div class="form-wrap">
     <div class="form-group">
       <label>Azienda *</label>
-      <input type="text" id="nv-azienda" placeholder="Es. Az. Agr. Ronchi di Cialla">
+      <select id="nv-azienda-sel" onchange="onNvAziendaChange()">
+        <option value="">— seleziona azienda —</option>
+      </select>
     </div>
     <div class="form-group">
       <label>Vigna / Nome vigneto *</label>
@@ -2205,6 +2282,7 @@ function enhanceSelect(id, faceClass, opts) {
 function enhanceAllSelects() {
   enhanceSelect('map-rilievo-sel',   'sel-face-mid', { flex: true });
   enhanceSelect('vy-azienda-filter', 'sel-face-mid', { flex: true });
+  enhanceSelect('nv-azienda-sel',    'sel-face-form');
   enhanceSelect('stats-sel',       'sel-face-mid');
   enhanceSelect('cf-rilievo',      'sel-face-form');
   enhanceSelect('cf-parte',        'sel-face-form');
@@ -2251,6 +2329,7 @@ function esc(v) {
 /* ═══════════════════ STATE ═══════════════════ */
 let vineyards = JSON.parse(localStorage.getItem('vt_vineyards') || '[]');
 let rilievi   = JSON.parse(localStorage.getItem('vt_rilievi')   || '[]');
+let aziende   = JSON.parse(localStorage.getItem('vt_aziende')   || '[]');
 
 // Salva vigneti + rilievi su localStorage. Avvolto in try/catch: se lo storage
 // del browser è pieno (QuotaExceededError — può succedere dopo una stagione di
@@ -2271,6 +2350,191 @@ function saveData() {
   }
 }
 
+function saveAziende() {
+  try {
+    localStorage.setItem('vt_aziende', JSON.stringify(aziende));
+    return true;
+  } catch (e) {
+    console.error('Salvataggio aziende fallito:', e);
+    return false;
+  }
+}
+
+/* ═══════════════════ DB AZIENDE ═══════════════════
+   Anagrafica aziende, "genitrice" dei vigneti. Ogni vigneto punta a
+   un'azienda tramite v.aziendaId; il campo v.azienda (nome, testo)
+   resta popolato in automatico per compatibilità con tutto il codice
+   preesistente (filtri, ricerche, export CSV, PDF) che lavora già sul
+   nome azienda come stringa. */
+function findAzienda(id) { return aziende.find(a => a.id === id); }
+function getAziendaNome(id) { const a = findAzienda(id); return a ? a.nome : ''; }
+
+// Migrazione una-tantum: ricava le aziende dai nomi già presenti nei
+// vigneti (versioni precedenti salvavano solo v.azienda come testo
+// libero) e collega ogni vigneto alla relativa azienda tramite id.
+function migrateAziendeFromLegacy() {
+  let changed = false;
+  vineyards.forEach(v => {
+    if (v.aziendaId && findAzienda(v.aziendaId)) return; // già collegato
+    const nome = (v.azienda || '').trim();
+    if (!nome) return;
+    let a = aziende.find(x => x.nome.toLowerCase() === nome.toLowerCase());
+    if (!a) {
+      a = { id: 'az_' + Date.now() + '_' + Math.random().toString(36).slice(2,7), nome, createdAt: new Date().toISOString().split('T')[0] };
+      aziende.push(a);
+      changed = true;
+    }
+    if (v.aziendaId !== a.id) { v.aziendaId = a.id; changed = true; }
+  });
+  if (changed) { saveAziende(); saveData(); }
+}
+
+function populateAziendaOptions() {
+  const sel = document.getElementById('nv-azienda-sel');
+  if (!sel) return;
+  const cur = sel.value;
+  const sorted = [...aziende].sort((a,b) => a.nome.localeCompare(b.nome));
+  sel.innerHTML = '<option value="">— seleziona azienda —</option>' +
+    sorted.map(a => `<option value="${esc(a.id)}">${esc(a.nome)}</option>`).join('') +
+    '<option value="__new__">➕ Nuova azienda…</option>';
+  if (sorted.find(a => a.id === cur)) sel.value = cur;
+  if (sel._syncFace) sel._syncFace();
+}
+
+function onNvAziendaChange() {
+  const sel = document.getElementById('nv-azienda-sel');
+  if (sel.value === '__new__') {
+    setSel('nv-azienda-sel', '');
+    openNewAzienda(true);
+  }
+}
+
+function openAziendeList() {
+  const s = document.getElementById('az-search'); if (s) s.value = '';
+  renderAziende();
+  showPage('page-aziende', 'Aziende');
+}
+
+function renderAziende() {
+  const list = document.getElementById('azienda-list');
+  if (!list) return;
+  const q = (document.getElementById('az-search')?.value || '').toLowerCase();
+  const filtered = aziende.filter(a => !q || (a.nome||'').toLowerCase().includes(q) || (a.comune||'').toLowerCase().includes(q) || (a.piva||'').toLowerCase().includes(q));
+  if (aziende.length === 0) {
+    list.innerHTML = '<div class="empty"><p>Nessuna azienda ancora</p></div>';
+    return;
+  }
+  if (filtered.length === 0) {
+    list.innerHTML = '<div class="empty"><p>Nessun risultato</p></div>';
+    return;
+  }
+  list.innerHTML = filtered.sort((a,b) => a.nome.localeCompare(b.nome)).map(a => {
+    const nV = vineyards.filter(v => v.aziendaId === a.id).length;
+    return `<div class="vineyard-card" onclick="editAzienda('${a.id}')">
+      <div class="vineyard-card-body">
+        <div class="vc-strip" style="background:var(--vine)"></div>
+        <div class="vc-inner">
+          <div class="vc-name">${esc(a.nome)}</div>
+          <div class="vc-meta">${esc(a.comune) || '—'}${a.piva ? ' · P.IVA ' + esc(a.piva) : ''}</div>
+        </div>
+        <div style="padding:14px; display:flex; align-items:center; justify-content:center;">
+          <span class="ri-badge badge-green" style="font-size:11px; padding:2px 8px;">${nV} vigneti</span>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+let editingAziendaId = null;
+let pendingVineyardAziendaReturn = false;
+
+function openNewAzienda(fromVineyardForm) {
+  editingAziendaId = null;
+  pendingVineyardAziendaReturn = !!fromVineyardForm;
+  document.getElementById('az-page-title').textContent = 'Nuova azienda';
+  document.getElementById('az-save-lbl').textContent = 'Crea azienda';
+  document.getElementById('az-delete-btn').style.display = 'none';
+  ['az-nome','az-piva','az-indirizzo','az-comune','az-provincia','az-referente','az-telefono','az-email','az-note']
+    .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  showPage('page-new-azienda', 'Nuova azienda');
+}
+
+function editAzienda(id) {
+  const a = aziende.find(x => x.id === id); if (!a) return;
+  editingAziendaId = id;
+  pendingVineyardAziendaReturn = false;
+  document.getElementById('az-page-title').textContent = 'Modifica azienda';
+  document.getElementById('az-save-lbl').textContent = 'Salva modifiche';
+  document.getElementById('az-delete-btn').style.display = '';
+  document.getElementById('az-nome').value = a.nome || '';
+  document.getElementById('az-piva').value = a.piva || '';
+  document.getElementById('az-indirizzo').value = a.indirizzo || '';
+  document.getElementById('az-comune').value = a.comune || '';
+  document.getElementById('az-provincia').value = a.provincia || '';
+  document.getElementById('az-referente').value = a.referente || '';
+  document.getElementById('az-telefono').value = a.telefono || '';
+  document.getElementById('az-email').value = a.email || '';
+  document.getElementById('az-note').value = a.note || '';
+  showPage('page-new-azienda', 'Modifica azienda');
+}
+
+function saveAzienda() {
+  const nome = document.getElementById('az-nome').value.trim();
+  if (!nome) { showToast('Inserisci la ragione sociale'); return; }
+  const data = {
+    nome,
+    piva: document.getElementById('az-piva').value.trim(),
+    indirizzo: document.getElementById('az-indirizzo').value.trim(),
+    comune: document.getElementById('az-comune').value.trim(),
+    provincia: document.getElementById('az-provincia').value.trim().toUpperCase(),
+    referente: document.getElementById('az-referente').value.trim(),
+    telefono: document.getElementById('az-telefono').value.trim(),
+    email: document.getElementById('az-email').value.trim(),
+    note: document.getElementById('az-note').value.trim(),
+  };
+  let savedId;
+  if (editingAziendaId) {
+    const idx = aziende.findIndex(x => x.id === editingAziendaId);
+    if (idx === -1) return;
+    aziende[idx] = { ...aziende[idx], ...data };
+    savedId = aziende[idx].id;
+    vineyards.forEach(v => { if (v.aziendaId === savedId) v.azienda = nome; });
+    saveData();
+    showToast('Azienda aggiornata');
+  } else {
+    savedId = 'az_' + Date.now() + '_' + Math.random().toString(36).slice(2,7);
+    aziende.push({ id: savedId, ...data, createdAt: new Date().toISOString().split('T')[0] });
+    showToast('Azienda creata');
+  }
+  saveAziende();
+  const returnToVineyard = pendingVineyardAziendaReturn;
+  pendingVineyardAziendaReturn = false;
+  editingAziendaId = null;
+  goBack();
+  if (returnToVineyard) {
+    populateAziendaOptions();
+    setTimeout(() => { setSel('nv-azienda-sel', savedId); }, 30);
+  } else {
+    renderAziende();
+    renderVineyards();
+  }
+}
+
+function deleteAzienda() {
+  if (!editingAziendaId) return;
+  const linked = vineyards.filter(v => v.aziendaId === editingAziendaId).length;
+  if (linked > 0 && !confirm(`${linked} vigneto/i sono collegati a questa azienda. Il nome resterà sui vigneti, ma il collegamento all'anagrafica andrà perso. Continuare?`)) return;
+  if (linked === 0 && !confirm('Eliminare questa azienda?')) return;
+  vineyards.forEach(v => { if (v.aziendaId === editingAziendaId) v.aziendaId = null; });
+  if (linked > 0) saveData();
+  aziende = aziende.filter(a => a.id !== editingAziendaId);
+  saveAziende();
+  editingAziendaId = null;
+  showToast('Azienda eliminata');
+  goBack();
+  renderAziende();
+}
+
 /* ═══════════════════ ACTIVE RILIEVO STATE ═══════════════════ */
 let activeRilievo = null;       // {vineyardId, name, prefix, filari, piantaPerFilare, plants[], date, operatore}
 let currentFilare = 1;
@@ -2284,6 +2548,7 @@ let mapFilter = 'all';
 
 /* ═══════════════════ INIT ═══════════════════ */
 window.onload = () => {
+  migrateAziendeFromLegacy();
   const now = new Date();
   const opts = { weekday:'long', year:'numeric', month:'long', day:'numeric' };
   const ds = now.toLocaleDateString('it-IT', opts);
@@ -2526,7 +2791,8 @@ function editCurrentVineyard() {
   editingVineyardId = v.id;
   document.getElementById('nv-page-title').textContent = 'Modifica vigneto';
   document.getElementById('nv-save-lbl').textContent = 'Salva modifiche';
-  document.getElementById('nv-azienda').value = v.azienda || '';
+  populateAziendaOptions();
+  setSel('nv-azienda-sel', v.aziendaId || '');
   document.getElementById('nv-name').value = v.name || '';
   document.getElementById('nv-prefix').value = v.prefix || '';
   document.getElementById('nv-lat').value = v.lat || '';
@@ -2543,7 +2809,9 @@ function openNewVineyard() {
   editingVineyardId = null;
   document.getElementById('nv-page-title').textContent = 'Nuovo vigneto';
   document.getElementById('nv-save-lbl').textContent = 'Crea vigneto';
-  ['nv-azienda','nv-name','nv-prefix','nv-lat','nv-lon','nv-anno','nv-loc','nv-note'].forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
+  ['nv-name','nv-prefix','nv-lat','nv-lon','nv-anno','nv-loc','nv-note'].forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
+  populateAziendaOptions();
+  setSel('nv-azienda-sel', '');
   document.getElementById('nv-gps-status').textContent = '';
   initVarietaField('');
   showPage('page-new-vineyard', 'Nuovo vigneto');
@@ -2552,8 +2820,9 @@ function openNewVineyard() {
 function saveVineyard() {
   const name = document.getElementById('nv-name').value.trim();
   if (!name) { showToast('Inserisci il nome del vigneto'); return; }
-  const azienda = document.getElementById('nv-azienda').value.trim();
-  if (!azienda) { showToast("Inserisci il nome dell'azienda"); return; }
+  const aziendaId = document.getElementById('nv-azienda-sel').value;
+  if (!aziendaId || aziendaId === '__new__') { showToast("Seleziona l'azienda"); return; }
+  const azienda = getAziendaNome(aziendaId);
   const varieta = document.getElementById('nv-varieta').value.trim();
   if (!varieta) { showToast('Seleziona la varietà'); return; }
   const lat = parseFloat(document.getElementById('nv-lat').value) || null;
@@ -2567,7 +2836,7 @@ function saveVineyard() {
     let prefix = document.getElementById('nv-prefix').value.trim().toUpperCase() || existing.prefix;
     vineyards[idx] = {
       ...existing,
-      name, prefix, azienda, lat, lon,
+      name, prefix, azienda, aziendaId, lat, lon,
       varieta: document.getElementById('nv-varieta').value,
       anno: document.getElementById('nv-anno').value,
       loc: document.getElementById('nv-loc').value,
@@ -2593,7 +2862,7 @@ function saveVineyard() {
     }
     const v = {
       id: 'v_' + Date.now(),
-      name, prefix, azienda,
+      name, prefix, azienda, aziendaId,
       filari: null, piantaPerFilare: null,
       lat, lon,
       varieta: document.getElementById('nv-varieta').value,
@@ -2607,7 +2876,8 @@ function saveVineyard() {
     showToast('Vigneto creato — codice: ' + prefix);
     goBack();
     renderVineyards();
-    ['nv-azienda','nv-name','nv-prefix','nv-lat','nv-lon','nv-anno','nv-loc','nv-note'].forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
+    ['nv-name','nv-prefix','nv-lat','nv-lon','nv-anno','nv-loc','nv-note'].forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
+    setSel('nv-azienda-sel', '');
     document.getElementById('nv-gps-status').textContent = '';
   }
 }
@@ -4971,6 +5241,7 @@ function renderSyncStatus() {
     ['Piante rilevate', rilievi.reduce((s,r)=>s+r.plants.length,0).toLocaleString('it-IT')],
     ['Punti GPS', gps.toLocaleString('it-IT')],
     ['Campioni', (typeof campioni !== 'undefined' ? campioni.length : 0)],
+    ['Aziende', aziende.length],
     ['Protocolli custom', customProtocols.length],
     ['Varietà custom', customVarieta.length],
   ];
@@ -4989,6 +5260,7 @@ function _buildSyncPayload() {
     vineyards,
     rilievi,
     campioni: (typeof campioni !== 'undefined' ? campioni : []),
+    aziende,
     customProtocols,
     deletedBuiltinIds,
     customVarieta
@@ -5037,10 +5309,14 @@ function syncImportFromPC(event) {
     const inV  = data.vineyards || (Array.isArray(data) ? [] : []);
     const inR  = data.rilievi   || [];
     const inC  = data.campioni  || [];
+    const inAz = data.aziende   || [];
     const inCP = data.customProtocols   || [];
     const inDB = data.deletedBuiltinIds || [];
     const inCV = data.customVarieta     || [];
-    let addV=0, addR=0, updR=0, addC=0, addP=0, addVar=0;
+    let addV=0, addR=0, updR=0, addC=0, addP=0, addVar=0, addAz=0;
+    // Le aziende vanno unite PRIMA dei vigneti, perché i vigneti in arrivo
+    // referenziano gli id azienda tramite aziendaId.
+    inAz.forEach(a => { if (!aziende.find(x=>x.id===a.id)) { aziende.push(a); addAz++; } });
     inV.forEach(v => { if (!vineyards.find(x=>x.id===v.id)) { vineyards.push(v); addV++; } });
     inR.forEach(r => {
       const idx = rilievi.findIndex(x=>x.id===r.id);
@@ -5056,9 +5332,11 @@ function syncImportFromPC(event) {
     inDB.forEach(id => { if (!deletedBuiltinIds.includes(id)) deletedBuiltinIds.push(id); });
     // Merge varietà custom
     inCV.forEach(v => { if (!customVarieta.find(x=>x.toLowerCase()===v.toLowerCase())) { customVarieta.push(v); addVar++; } });
-    saveData(); saveCustomProtocols(); saveCustomVarieta();
+    saveData(); saveAziende(); saveCustomProtocols(); saveCustomVarieta();
+    migrateAziendeFromLegacy();
     renderHome(); renderVineyards(); renderSyncStatus();
     let msg = `Importati: ${addV} vigneti, ${addR} nuovi rilievi (+${updR} aggiornati), ${addC} campioni`;
+    if (addAz) msg += `, ${addAz} aziende`;
     if (addP || addVar) msg += `, ${addP} protocolli, ${addVar} varietà`;
     showToast(msg, 4000);
   }).catch(() => showToast('Errore lettura file'));
@@ -5071,25 +5349,27 @@ function syncRestoreBackup(event) {
     let data; try { data = JSON.parse(txt); } catch(e) { showToast('File non valido'); return; }
     const nProto = (data.customProtocols||[]).length;
     const nVar   = (data.customVarieta||[]).length;
-    if (!confirm(`Ripristinare questo backup?\n${(data.vineyards||[]).length} vigneti, ${(data.rilievi||[]).length} rilievi, ${nProto} protocolli custom, ${nVar} varietà custom.\n\nI dati attuali verranno SOSTITUITI.`)) return;
+    if (!confirm(`Ripristinare questo backup?\n${(data.vineyards||[]).length} vigneti, ${(data.rilievi||[]).length} rilievi, ${(data.aziende||[]).length} aziende, ${nProto} protocolli custom, ${nVar} varietà custom.\n\nI dati attuali verranno SOSTITUITI.`)) return;
     vineyards = data.vineyards || [];
     rilievi   = data.rilievi   || [];
     if (typeof campioni !== 'undefined') campioni = data.campioni || [];
+    aziende           = data.aziende           || [];
     customProtocols   = data.customProtocols   || [];
     deletedBuiltinIds = data.deletedBuiltinIds || [];
     customVarieta     = data.customVarieta     || [];
-    saveData(); saveCustomProtocols(); saveCustomVarieta();
+    saveData(); saveAziende(); saveCustomProtocols(); saveCustomVarieta();
+    migrateAziendeFromLegacy();
     renderHome(); renderVineyards(); renderSyncStatus();
-    showToast(`Backup ripristinato: ${vineyards.length} vigneti, ${nProto} protocolli, ${customVarieta.length} varietà`);
+    showToast(`Backup ripristinato: ${vineyards.length} vigneti, ${aziende.length} aziende, ${nProto} protocolli, ${customVarieta.length} varietà`);
   }).catch(() => showToast('Errore lettura file'));
 }
 
 function syncClearAll() {
   if (!confirm('ELIMINARE TUTTI I DATI?\nEseguire prima un backup!')) return;
   if (!confirm('Sicuro? Operazione irreversibile.')) return;
-  vineyards = []; rilievi = [];
+  vineyards = []; rilievi = []; aziende = [];
   if (typeof campioni !== 'undefined') campioni = [];
-  saveData();
+  saveData(); saveAziende();
   renderHome(); renderVineyards(); renderSyncStatus();
   showToast('Tutti i dati eliminati');
 }
