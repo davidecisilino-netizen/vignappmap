@@ -1,17 +1,17 @@
 {
-  "name": "VignApp Map",
-  "short_name": "VignApp Map",
-  "description": "Rilievi di campo per agronomi - vigneti",
-  "start_url": "./VignApp_Map_v5_8.html",
+  "name": "VignaPlanner Campo",
+  "short_name": "VP Campo",
+  "description": "Consulta in campo i vigneti creati con VignaPlanner: varietà, filari e viti su mappa GPS.",
+  "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
-  "orientation": "portrait",
-  "background_color": "#F5F2ED",
-  "theme_color": "#1E5C2E",
+  "orientation": "any",
+  "background_color": "#0e1410",
+  "theme_color": "#1a4a1a",
   "icons": [
-    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
-    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
-    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-192-maskable.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "icons/icon-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ]
 }
