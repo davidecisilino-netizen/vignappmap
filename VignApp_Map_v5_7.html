@@ -1926,6 +1926,10 @@ body.rilievo-fullscreen #bottom-nav { display: none; }
   <div class="list-header"><h2 id="cform-title">Nuovo campione</h2></div>
   <div class="form-wrap">
     <div class="form-group">
+      <label>Codice campione</label>
+      <input type="text" id="cf-codice" placeholder="Es. C-2026-001">
+    </div>
+    <div class="form-group">
       <label>Rilievo di riferimento *</label>
       <select id="cf-rilievo" onchange="loadPiantePicker()">
         <option value="">— seleziona rilievo —</option>
@@ -1941,7 +1945,7 @@ body.rilievo-fullscreen #bottom-nav { display: none; }
       <select id="cf-parte">
         <option value="">— seleziona —</option>
         <optgroup label="Organi verdi">
-          <option>Foglia (lamina)</option><option>Foglia (picciolo)</option>
+          <option>Foglia</option>
           <option>Germoglio apicale</option><option>Tralcio verde</option>
         </optgroup>
         <optgroup label="Legno">
@@ -3306,11 +3310,16 @@ window.addEventListener('pagehide', () => {
   if (activeRilievo) { clearTimeout(_autosaveTimer); persistRilievoProgress(); }
 });
 
-// Riprende un rilievo "in corso" esattamente da dove era stato interrotto:
-// stesso filare/pianta/direzione e stesso protocollo di classificazione.
+// Riprende un rilievo, sia "in corso" (esattamente da dove era stato interrotto:
+// stesso filare/pianta/direzione) sia già "completato" (in questo caso non esiste
+// un punto di interruzione salvato, quindi si riparte in modo deterministico
+// dall'ultima pianta effettivamente inserita: stesso filare, posizione successiva,
+// direzione "dall'inizio". Sarà poi l'utente a cambiare filare se necessario).
+// In entrambi i casi info e piante già presenti nel rilievo restano invariate:
+// si aggiungono solo nuove piante/filari da qui in avanti.
 function resumeRilievo(id) {
   const r = rilievi.find(x => x.id === id);
-  if (!r || r.status !== 'in_corso') return;
+  if (!r) return;
   activeRilievo = r;
   if (r.protocollo) {
     activeProtocol = {
@@ -3320,10 +3329,22 @@ function resumeRilievo(id) {
       classes: r.protocollo.classes.map(c => ({...c}))
     };
   }
-  const prog = r._progress || {};
-  currentFilare = prog.filare || 1;
-  currentPianta = prog.pianta || 1;
-  currentDir = prog.dir || 'from';
+  if (r.status === 'in_corso' && r._progress) {
+    // Ripresa "esatta": il rilievo era stato salvato mentre era ancora aperto,
+    // quindi conosciamo il punto preciso in cui l'utente si era interrotto.
+    const prog = r._progress;
+    currentFilare = prog.filare || 1;
+    currentPianta = prog.pianta || 1;
+    currentDir = prog.dir || 'from';
+  } else {
+    // Rilievo già chiuso (o senza un progresso salvato): non c'è un punto di
+    // interruzione noto, quindi si riparte dall'ultima pianta inserita in
+    // ordine cronologico (l'array `plants` mantiene l'ordine di inserimento).
+    const last = r.plants.length ? r.plants[r.plants.length - 1] : null;
+    currentFilare = last ? last.filare : 1;
+    currentPianta = last ? last.posizione + 1 : 1;
+    currentDir = 'from';
+  }
 
   const _spw = document.getElementById('start-pos-wrap');
   if (_spw) _spw.style.display = 'none';
@@ -3343,7 +3364,7 @@ function resumeRilievo(id) {
   showPage('page-rilievo', r.vineyardName);
   document.querySelectorAll('.classif-btn').forEach(b => b.classList.remove('selected'));
   document.getElementById('ril-note').value = '';
-  showToast(`Rilievo ripreso: ${r.plants.length} piante già registrate`);
+  showToast(`Rilievo ripreso: continua da filare ${currentFilare}, pianta ${String(currentPianta).padStart(3,'0')} (${r.plants.length} già registrate)`);
 }
 
 // Intercetta il pulsante "Indietro" della topbar: durante un rilievo attivo chiede
@@ -3378,9 +3399,25 @@ function exitRilievoDiscard() {
   goBack();
 }
 
+// Passo 1: validazione + apertura del modal di conferma. La chiusura/salvataggio
+// vero e proprio avviene solo dopo conferma esplicita, in confirmCompleteRilievo().
 function completeRilievo() {
   if (!activeRilievo) return;
   if (activeRilievo.plants.length === 0) { showToast('Nessuna pianta classificata'); return; }
+  const n = activeRilievo.plants.length;
+  document.getElementById('confirm-complete-count').textContent =
+    `${n} pianta${n === 1 ? '' : 'e'} classificat${n === 1 ? 'a' : 'e'}`;
+  document.getElementById('confirm-complete-modal').classList.add('open');
+}
+
+function closeConfirmCompleteModal() {
+  document.getElementById('confirm-complete-modal').classList.remove('open');
+}
+
+// Passo 2: conferma esplicita dell'utente → chiusura e salvataggio effettivi del rilievo.
+function confirmCompleteRilievo() {
+  closeConfirmCompleteModal();
+  if (!activeRilievo) return;
   vibrate([20,50,20,50,20]); // pattern più lungo: conferma chiusura rilievo
 
   // Se l'ultimo filare è stato rilevato "dal fondo" e l'agronomo
@@ -3404,7 +3441,13 @@ function completeRilievo() {
   });
 
   activeRilievo.status = 'completato';
-  rilievi.push(activeRilievo);
+  // Upsert per id (non un push incondizionato): se il rilievo era già presente
+  // nell'array — perché era "in corso" e salvato, oppure perché era già
+  // "completato" ed è stato ripreso per aggiungere altre piante — bisogna
+  // aggiornare la voce esistente, non aggiungerne una seconda copia con lo
+  // stesso id (che duplicherebbe piante e conteggi negli export/riepiloghi).
+  const idxC = rilievi.findIndex(r => r.id === activeRilievo.id);
+  if (idxC >= 0) rilievi[idxC] = activeRilievo; else rilievi.push(activeRilievo);
   saveData();
   stopGPS();
   populateRilieviSelect();
@@ -3496,8 +3539,10 @@ function openRilievo(id) {
     html += '</div>';
   });
   document.getElementById('rd-plant-grid').innerHTML = html;
+  // Il rilievo si può riprendere sempre, sia "in corso" che già "completato":
+  // in quest'ultimo caso resumeRilievo() ripartirà dall'ultima pianta inserita.
   const resumeBtn = document.getElementById('rd-resume-btn');
-  if (resumeBtn) resumeBtn.style.display = (r.status === 'in_corso') ? 'flex' : 'none';
+  if (resumeBtn) resumeBtn.style.display = 'flex';
   showPage('page-rilievo-detail', r.vineyardName);
 }
 
@@ -4266,7 +4311,7 @@ function openNewCampione() {
     }).join('');
   if (sel._syncFace) sel._syncFace();
   // Reset fields
-  ['cf-parte','cf-tipo','cf-lab','cf-data','cf-ncontenitori','cf-operatore','cf-note'].forEach(id => {
+  ['cf-codice','cf-parte','cf-tipo','cf-lab','cf-data','cf-ncontenitori','cf-operatore','cf-note'].forEach(id => {
     const el = document.getElementById(id);
     if (el) { el.value = ''; if (el._syncFace) el._syncFace(); }
   });
@@ -4379,6 +4424,7 @@ function saveCampione() {
   const pianteDettaglio = selectedPiante.map(cod => pianteGps[cod] || { codice: cod, lat: null, lon: null });
 
   const campoComuni = {
+    codice:        document.getElementById('cf-codice').value,
     rilievodId:    rilId,
     vineyardName:  r ? r.vineyardName : '',
     piante:        [...selectedPiante],
@@ -4434,7 +4480,7 @@ function renderCampioni() {
       `<div class="ril-card-body">`+
         `<div class="ril-strip" style="background:#0D7680"></div>`+
         `<div class="ril-inner">`+
-          `<div class="ril-vineyard">${esc(c.tipo)||'—'}</div>`+
+          `<div class="ril-vineyard">${c.codice ? esc(c.codice) + ' — ' : ''}${esc(c.tipo)||'—'}</div>`+
           `<div class="ril-date">${esc(c.data)||'—'}${c.operatore ? ' · ' + esc(c.operatore) : ''}</div>`+
           `<div class="ril-meta">${c.piante ? c.piante.length : 0} piante · ${esc(c.parte)||'—'}${c.laboratorio ? ' · ' + esc(c.laboratorio) : ''}</div>`+
         `</div>`+
@@ -4462,6 +4508,7 @@ function openSmpModal(id) {
   document.getElementById('sdm-id').textContent = c.id;
   const grid = document.getElementById('sdm-grid');
   grid.innerHTML = [
+    ['Codice campione', c.codice || '—'],
     ['Vigneto',       c.vineyardName || (r ? r.vineyardName : '—')],
     ['Data',          c.data || '—'],
     ['Parte pianta',  c.parte || '—'],
@@ -4522,6 +4569,7 @@ function editCampioneFromModal() {
       return '<option value="' + r.id + '"' + (r.id === c.rilievodId ? ' selected' : '') + '>' + esc(r.date) + ' — ' + esc(r.vineyardName) + (v && v.azienda ? ' (' + esc(v.azienda) + ')' : '') + '</option>';
     }).join('');
   if (sel._syncFace) sel._syncFace();
+  document.getElementById('cf-codice').value = c.codice || '';
   selectedPiante = [...(c.piante || [])];
   loadPiantePicker();
   setSel('cf-parte', c.parte || '');
@@ -4574,7 +4622,7 @@ function exportCampioniCsv() {
   if (campioni.length === 0) { showToast('Nessun campione da esportare'); return; }
 
   const headers = [
-    'ID campione', 'Vigneto', 'Data prelievo', 'Tipo analisi', 'Parte pianta',
+    'ID campione', 'Codice campione', 'Vigneto', 'Data prelievo', 'Tipo analisi', 'Parte pianta',
     'Laboratorio', 'Codice pianta', 'Filare', 'Posizione', 'Classificazione',
     'Latitudine', 'Longitudine', 'GPS disponibile',
     'N contenitori', 'Operatore', 'Stato', 'Conservazione', 'Note'
@@ -4590,6 +4638,7 @@ function exportCampioniCsv() {
     dettagli.forEach(p => {
       rows.push([
         c.id,
+        c.codice || '',
         c.vineyardName || '',
         c.data || '',
         c.tipo || '',
@@ -5473,6 +5522,26 @@ function syncClearAll() {
         Esci senza salvare
       </button>
       <button class="btn-secondary" onclick="closeExitRilievoModal()">
+        Annulla, continua il rilievo
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="confirm-complete-modal">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Terminare il rilievo?</div>
+    <p style="font-size:13px;color:var(--text-soft);margin:-6px 0 4px;line-height:1.5">
+      Il rilievo verrà chiuso e salvato. Potrai comunque riaprirlo in seguito per aggiungere altre piante.
+    </p>
+    <p style="font-size:13px;font-weight:600;color:var(--vine);margin:0 0 18px" id="confirm-complete-count"></p>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <button class="btn-primary" style="background:#1E5C2E" onclick="confirmCompleteRilievo()">
+        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M5 12l5 5L20 7"/></svg>
+        Sì, termina e salva
+      </button>
+      <button class="btn-secondary" onclick="closeConfirmCompleteModal()">
         Annulla, continua il rilievo
       </button>
     </div>
