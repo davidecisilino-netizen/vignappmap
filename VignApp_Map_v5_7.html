@@ -2334,6 +2334,18 @@ function esc(v) {
 /* ═══════════════════ STATE ═══════════════════ */
 let vineyards = JSON.parse(localStorage.getItem('vt_vineyards') || '[]');
 let rilievi   = JSON.parse(localStorage.getItem('vt_rilievi')   || '[]');
+// Autoripara eventuali rilievi duplicati residui di versioni precedenti
+// dell'app (stesso id salvato più volte per un vecchio bug, oggi corretto):
+// tiene sempre la copia con più piante rilevate, scartando le altre.
+// (dedupeRilievi è definita più sotto: le dichiarazioni di funzione in
+// JavaScript vengono "hoisted", quindi è già disponibile qui.)
+(function _autoDedupeRilieviAlCaricamento() {
+  const deduped = dedupeRilievi(rilievi);
+  if (deduped.length !== rilievi.length) {
+    rilievi = deduped;
+    localStorage.setItem('vt_rilievi', JSON.stringify(rilievi));
+  }
+})();
 let aziende   = JSON.parse(localStorage.getItem('vt_aziende')   || '[]');
 
 // Salva vigneti + rilievi su localStorage. Avvolto in try/catch: se lo storage
@@ -5570,6 +5582,23 @@ async function syncShareFull() {
   showToast('File scaricato — allega all\'email');
 }
 
+// Rimuove eventuali rilievi duplicati (stesso id ripetuto più volte — poteva
+// succedere con un vecchio bug, oggi corretto, che a volte salvava due copie
+// dello stesso rilievo completato): per ogni id duplicato mantiene la versione
+// con più piante rilevate, scartando le altre. Si applica sia durante l'unione
+// di dati in arrivo (import) sia durante il ripristino di un backup, così un
+// backup più vecchio, eventualmente ancora corrotto, si "autorepara" da solo.
+function dedupeRilievi(arr) {
+  const best = new Map();
+  const order = [];
+  (arr || []).forEach(r => {
+    if (!r || r.id == null) return;
+    if (!best.has(r.id)) { best.set(r.id, r); order.push(r.id); }
+    else if ((r.plants || []).length > (best.get(r.id).plants || []).length) { best.set(r.id, r); }
+  });
+  return order.map(id => best.get(id));
+}
+
 function syncImportFromPC(event) {
   const file = event.target.files[0]; event.target.value = '';
   if (!file) return;
@@ -5593,6 +5622,10 @@ function syncImportFromPC(event) {
       if (idx === -1) { rilievi.push(r); addR++; }
       else if (r.plants.length > rilievi[idx].plants.length) { rilievi[idx] = r; updR++; }
     });
+    // Passata di sicurezza: se nel file in arrivo o già in locale fossero
+    // presenti più copie dello stesso rilievo (vedi dedupeRilievi), le riduce
+    // sempre a una sola, tenendo quella con più piante.
+    rilievi = dedupeRilievi(rilievi);
     if (typeof campioni !== 'undefined') {
       inC.forEach(c => { if (!campioni.find(x=>x.id===c.id)) { campioni.push(c); addC++; } });
     }
@@ -5621,7 +5654,7 @@ function syncRestoreBackup(event) {
     const nVar   = (data.customVarieta||[]).length;
     if (!confirm(`Ripristinare questo backup?\n${(data.vineyards||[]).length} vigneti, ${(data.rilievi||[]).length} rilievi, ${(data.aziende||[]).length} aziende, ${nProto} protocolli custom, ${nVar} varietà custom.\n\nI dati attuali verranno SOSTITUITI.`)) return;
     vineyards = data.vineyards || [];
-    rilievi   = data.rilievi   || [];
+    rilievi   = dedupeRilievi(data.rilievi || []);
     if (typeof campioni !== 'undefined') campioni = data.campioni || [];
     aziende           = data.aziende           || [];
     customProtocols   = data.customProtocols   || [];
