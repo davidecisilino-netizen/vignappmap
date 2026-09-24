@@ -733,6 +733,30 @@ body.rilievo-fullscreen #bottom-nav { display: none; }
   overflow: hidden;
   text-overflow: ellipsis;
 }
+.ril-recent-chip .rc-smp {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  color: #0D7680;
+  font-weight: 700;
+  font-size: 10px;
+  flex-shrink: 0;
+}
+.ril-recent-chip .rc-smp-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px; height: 22px;
+  flex-shrink: 0;
+  border: none;
+  border-radius: 50%;
+  background: rgba(13,118,128,.12);
+  color: #0D7680;
+  padding: 0;
+  margin-left: 1px;
+  cursor: pointer;
+}
+.ril-recent-chip .rc-smp-btn:active { background: rgba(13,118,128,.28); transform: scale(.92); }
 
 /* Navigation bottom */
 .rilievo-footer {
@@ -962,6 +986,7 @@ body.rilievo-fullscreen #bottom-nav { display: none; }
   padding: 16px;
 }
 .plant-cell {
+  position: relative;
   aspect-ratio: 1;
   border-radius: 6px;
   display: flex;
@@ -973,6 +998,15 @@ body.rilievo-fullscreen #bottom-nav { display: none; }
   border: 2px solid transparent;
   transition: transform .1s;
   color: #fff;
+}
+.plant-cell.has-sample::after {
+  content: '';
+  position: absolute;
+  top: -3px; right: -3px;
+  width: 9px; height: 9px;
+  border-radius: 50%;
+  background: #0D7680;
+  border: 1.5px solid #fff;
 }
 .plant-cell:active { transform: scale(1.1); }
 .pc-sana      { background: var(--sana); }
@@ -1167,15 +1201,6 @@ body.rilievo-fullscreen #bottom-nav { display: none; }
 .info-edit-row{display:flex;gap:10px;margin-bottom:12px}
 
 /* ── PROTOCOL SELECTION PAGE ── */
-.protocol-banner {
-  background: linear-gradient(135deg, #173528 0%, #1f4a36 100%);
-  border-bottom: 2px solid var(--vine-light);
-  padding: 8px 12px;
-  color: #fff;
-}
-.protocol-banner .pb-label { font-size: 9px; font-weight: 700; color: #8dbfaa; text-transform: uppercase; letter-spacing: .6px; margin-bottom: 2px; }
-.protocol-banner .pb-name  { font-size: 13px; font-weight: 800; }
-.protocol-banner .pb-desc  { font-size: 10px; color: #8dbfaa; margin-top: 1px; }
 
 .protocol-card {
   background: var(--surface); border: 2px solid var(--border); border-radius: 14px;
@@ -1302,7 +1327,9 @@ body.rilievo-fullscreen #bottom-nav { display: none; }
       <svg width="28" height="28" fill="none" stroke="#F5F2ED" stroke-width="2" viewBox="0 0 24 24"><path d="M12 2a9 9 0 0 1 9 9c0 4.17-2.84 7.67-6.75 8.68L12 22l-2.25-2.32C5.84 18.67 3 15.17 3 11a9 9 0 0 1 9-9z"/><circle cx="12" cy="11" r="3"/></svg>
     </div>
     <div style="font-family:'Inter',sans-serif; font-weight:700; font-size:18px; color:#1E5C2E; margin-bottom:4px;">VignApp Map</div>
-    <div style="font-family:'Inter',sans-serif; font-size:13px; color:#8A8478; margin-bottom:20px;">Accesso riservato — inserisci la password</div>
+    <div style="font-family:'Inter',sans-serif; font-size:13px; color:#8A8478; margin-bottom:20px;">Accesso riservato — inserisci le tue credenziali</div>
+    <input type="text" id="login-user-input" placeholder="Nome utente" autocomplete="username"
+      style="width:100%; box-sizing:border-box; padding:12px 14px; border:1px solid #E0DAD0; border-radius:10px; font-size:15px; font-family:'Inter',sans-serif; margin-bottom:10px; outline:none;">
     <input type="password" id="login-pw-input" placeholder="Password" autocomplete="current-password"
       style="width:100%; box-sizing:border-box; padding:12px 14px; border:1px solid #E0DAD0; border-radius:10px; font-size:15px; font-family:'Inter',sans-serif; margin-bottom:10px; outline:none;">
     <div id="login-error" style="color:#B3452E; font-size:12px; font-family:'Inter',sans-serif; min-height:16px; margin-bottom:8px;"></div>
@@ -1327,7 +1354,7 @@ body.rilievo-fullscreen #bottom-nav { display: none; }
   </div>
   <span class="topbar-title" id="topbar-title"></span>
   <div class="spacer"></div>
-  <div style="font-size:12px; opacity:.7;" id="topbar-date"></div>
+  <div style="font-size:12px; opacity:.7;" id="topbar-date" title="Utente collegato"></div>
 </div>
 
 <!-- APP -->
@@ -1650,13 +1677,6 @@ body.rilievo-fullscreen #bottom-nav { display: none; }
 
 <!-- ══ RILIEVO ══ -->
 <div class="page" id="page-rilievo">
-  <!-- banner protocollo attivo -->
-  <div class="protocol-banner" id="ril-protocol-banner" style="display:none">
-    <div class="pb-label">Protocollo attivo</div>
-    <div class="pb-name" id="ril-proto-name">—</div>
-    <div class="pb-desc" id="ril-proto-desc"></div>
-  </div>
-
   <div class="rilievo-header">
     <div class="rilievo-meta">
       <div class="rilievo-counter" onclick="openGoToFilareModal()" style="cursor:pointer" title="Tocca per andare a un filare specifico">
@@ -1929,7 +1949,7 @@ body.rilievo-fullscreen #bottom-nav { display: none; }
   <div class="form-wrap">
     <div class="form-group">
       <label>Codice campione</label>
-      <input type="text" id="cf-codice" placeholder="Es. C-2026-001">
+      <input type="text" id="cf-codice" placeholder="Es. DC_260923_01">
     </div>
     <div class="form-group">
       <label>Rilievo di riferimento *</label>
@@ -2002,32 +2022,9 @@ body.rilievo-fullscreen #bottom-nav { display: none; }
         <input type="number" id="cf-ncontenitori" placeholder="1" min="1">
       </div>
     </div>
-    <div class="form-row">
-      <div class="form-group">
-        <label>Operatore</label>
-        <input type="text" id="cf-operatore" placeholder="Nome">
-      </div>
-      <div class="form-group">
-        <label>Stato</label>
-        <select id="cf-stato">
-          <option value="Prelevato">Prelevato</option>
-          <option value="Inviato">Inviato al lab</option>
-          <option value="In analisi">In analisi</option>
-          <option value="Refertato">Refertato</option>
-          <option value="Archiviato">Archiviato</option>
-        </select>
-      </div>
-    </div>
     <div class="form-group">
-      <label>Conservazione campione</label>
-      <select id="cf-conservazione">
-        <option value="">— seleziona —</option>
-        <option>Fresco (refrigerato 4°C)</option>
-        <option>Congelato −20°C</option><option>Congelato −80°C</option>
-        <option>Silica gel (essiccato)</option>
-        <option>Fissato in etanolo 95%</option><option>Fissato in FAA</option>
-        <option>Temperatura ambiente</option>
-      </select>
+      <label>Operatore</label>
+      <input type="text" id="cf-operatore" placeholder="Nome">
     </div>
     <div class="form-group">
       <label>Note / Osservazioni</label>
@@ -2176,6 +2173,10 @@ body.rilievo-fullscreen #bottom-nav { display: none; }
       <div class="mig-item"><label>Rilevata</label><span id="pm-time">—</span></div>
     </div>
     <div id="pm-note-wrap" style="font-size:13px; color:var(--text-soft); margin-bottom:14px;"></div>
+    <div id="pm-smp-wrap" style="display:none; margin-bottom:14px;">
+      <div style="font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.6px; color:#0D7680; margin-bottom:4px;">Campioni prelevati</div>
+      <div id="pm-smp-list" style="display:flex; flex-direction:column; gap:4px;"></div>
+    </div>
     <div class="modal-actions">
       <button class="btn-secondary" onclick="closePlantModal()">Chiudi</button>
       <button class="btn-primary" style="background:#0D7680;border:none;flex:1" onclick="newCampioneFromPlant()">Campiona</button>
@@ -2189,11 +2190,34 @@ body.rilievo-fullscreen #bottom-nav { display: none; }
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 <script>
 /* ═══════════════════ AUTH GATE ═══════════════════ */
-// Protezione base: password condivisa. NON è sicurezza forte (l'hash è comunque
-// leggibile nel sorgente e la logica gira lato client), serve solo a filtrare
-// l'accesso casuale. Per una vera autenticazione vedi Cloudflare Access.
-const AUTH_PW_HASH = '8b7ba091a168e6b83f78b8387b1118666764b85a125fcf3685c29a671790ea4e';
-const AUTH_STORAGE_KEY = 'vt_auth_ok';
+// Protezione base: credenziali per singolo utente, verificate via hash SHA-256
+// della password. NON è sicurezza forte (l'hash è comunque leggibile nel
+// sorgente e la logica gira lato client), serve solo a filtrare l'accesso
+// casuale e a identificare l'operatore che compila i rilievi/campionamenti.
+// Per una vera autenticazione vedi Cloudflare Access.
+const APP_USERS = {
+  'dcisilino':   { hash: 'd152d28dcd674fa74cf8236944899ce6520aa9b779696fe655160f9f43710598', nome: 'Davide Cisilino' },
+  'gquagliaro':  { hash: 'e6515028979cf194a647b93473882f8d0fcd2d5bed30579347640e560954086d', nome: 'Giuseppe Quagliaro' },
+  'stomada':     { hash: 'c481c204f6b723e4a5ceef26bd655cb9f147d1a8940f10c0eb992f7f330a4662', nome: 'Selena Tomada' },
+  'fturco':      { hash: '2e6d2ca69b0b44ecba1b185b1b49c2346dc6e40559ffca7df96556b43a01286a', nome: 'Francesco Turco' },
+  'nbiasizzo':   { hash: '96d72fa2ea766f5c5e32778f1c5907c5694f35851da8249f204b50fa22ef696c', nome: 'Nicola Biasizzo' },
+  'lsartorel':   { hash: '8de52a93e1ffb5542e05ffbe0e8ccc3bfeee153b9d9126a01e768e917277ab93', nome: 'Luca Sartorel' },
+  'nfranceschi': { hash: '11ccd30badfd18175acd34bedca552287a2e469699628448d71268de3fea11e0', nome: 'Nicola Franceschi' },
+  'mfabro':      { hash: 'a64afcc2c0cfa1ae1ecfe08ffcdc0bdc0f25d32b95004bc8a5c3001bd3139639', nome: 'Michele Fabro' },
+  'msandra':     { hash: 'a9bdecd30decf2e05bd4431b49889fd53fecf7067aec5dcc7cca9d18ac38a5e9', nome: 'Mariangela Sandra' },
+  'lpoggetti':   { hash: 'e44e3c7c3a504b902fb51b48a599a2831959687a6213c55f5b4229bde4e902b0', nome: 'Luca Poggetti' },
+  'ggori':       { hash: 'ca95471ce3de28c0ac83153ad894aedac2a703552649524693a4d5a1a981cf79', nome: 'Gianluca Gori' },
+  'dcorsi':      { hash: 'c0bdccec1fce3ffdb23cda5a10ca93665de82d6487a9bbb732cb5ec126f7acf8', nome: 'Diego Corsi' },
+  'mtirendi':    { hash: 'ddb4e15b432c2dc0195cedb5bcd4b2ec662f0a47d9e9d07be4c7db1edfd84502', nome: 'Massimo Tirendi' },
+  'gfranco':     { hash: '5fadac4eae1367442936eec87c6ff78025fa5e70093d0060812ec726e78abf05', nome: 'Giulio Franco' },
+  'mmossenta':   { hash: '6d9c9fe64582ffd87d4fac9d46f2e33450d904fbc528aa94243bedf890e4fd5d', nome: 'Marta Mossenta' },
+  'sbressan':    { hash: '2467fddd2c19d1f5c910239eb965378699d83d94c17db457b4081a8a44fd1756', nome: 'Sandro Bressan' },
+  'pmutton':     { hash: '0af7eb6b59cc666479028cf8e2044b018dfa9b4026db7dddd623a22226364890', nome: 'Pierbruno Mutton' },
+  'aviglino':    { hash: 'ec134621506bf2d37ed6c77664cd357c3688db50a28947b6720f41e42d4c94fa', nome: 'Alessandro Viglino' },
+  'lvidoni':     { hash: '21506fecccaad88a9187830f22f28d3fea51a4da2d0b475f597438fc11062a8d', nome: 'Lorenzo Vidoni' },
+  'afiori':      { hash: 'b92634ad2b2f8d1f846ec4341924d0e8cc8b6ba83623473035a9260bbc336e54', nome: 'Alessandro Fiori' }
+};
+const AUTH_STORAGE_KEY = 'vt_auth_user';
 
 async function sha256Hex(str) {
   const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
@@ -2201,11 +2225,55 @@ async function sha256Hex(str) {
 }
 
 function isAuthenticated() {
-  return localStorage.getItem(AUTH_STORAGE_KEY) === AUTH_PW_HASH;
+  const uname = localStorage.getItem(AUTH_STORAGE_KEY);
+  return !!(uname && APP_USERS[uname]);
+}
+
+function getCurrentUsername() {
+  return localStorage.getItem(AUTH_STORAGE_KEY) || '';
+}
+
+function getCurrentUserName() {
+  const uname = getCurrentUsername();
+  const u = APP_USERS[uname];
+  return u ? u.nome : '';
+}
+
+// Genera il codice campione: INIZIALI_AAMMGG_NN (es. DC_260923_01)
+// - iniziali: prima lettera del nome + prima lettera del cognome dell'operatore loggato
+// - AAMMGG: data prelievo (anno-mese-giorno a 2 cifre ciascuno)
+// - NN: numero sequenziale a 2 cifre, incrementato se esistono già campioni con lo stesso prefisso
+function getUserInitials(nome) {
+  const parts = (nome || '').trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return '';
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
+function generateCampioneCodice(dateStr) {
+  const initials = getUserInitials(getCurrentUserName()) || 'XX';
+  const d = dateStr ? new Date(dateStr + 'T00:00:00') : new Date();
+  const yy = String(d.getFullYear()).slice(-2);
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const gg = String(d.getDate()).padStart(2, '0');
+  const prefix = initials + '_' + yy + mm + gg;
+  let maxSeq = 0;
+  (typeof campioni !== 'undefined' ? campioni : []).forEach(c => {
+    const m = (c.codice || '').match(new RegExp('^' + prefix + '_(\\d{2})$'));
+    if (m) maxSeq = Math.max(maxSeq, parseInt(m[1], 10));
+  });
+  const seq = String(maxSeq + 1).padStart(2, '0');
+  return prefix + '_' + seq;
+}
+
+function updateTopbarUser() {
+  const el = document.getElementById('topbar-date');
+  if (el) el.textContent = getCurrentUserName();
 }
 
 function unlockApp() {
   document.getElementById('login-gate').style.display = 'none';
+  updateTopbarUser();
 }
 
 function logoutApp() {
@@ -2214,15 +2282,25 @@ function logoutApp() {
 }
 
 async function attemptLogin() {
+  const userInput = document.getElementById('login-user-input');
   const input = document.getElementById('login-pw-input');
   const errEl = document.getElementById('login-error');
   const btn = document.getElementById('login-submit-btn');
+  const uname = (userInput.value || '').trim().toLowerCase();
   const pw = input.value;
+  if (!uname) { errEl.textContent = 'Inserisci il nome utente'; return; }
   if (!pw) { errEl.textContent = 'Inserisci la password'; return; }
+  const user = APP_USERS[uname];
+  if (!user) {
+    errEl.textContent = 'Utente non riconosciuto';
+    input.value = '';
+    userInput.focus();
+    return;
+  }
   btn.disabled = true;
   const hash = await sha256Hex(pw);
-  if (hash === AUTH_PW_HASH) {
-    localStorage.setItem(AUTH_STORAGE_KEY, hash); // resta valido finché non si cancellano i dati del browser
+  if (hash === user.hash) {
+    localStorage.setItem(AUTH_STORAGE_KEY, uname); // resta valido finché non si cancellano i dati del browser
     errEl.textContent = '';
     unlockApp();
   } else {
@@ -2238,9 +2316,11 @@ async function attemptLogin() {
     document.addEventListener('DOMContentLoaded', unlockApp);
   } else {
     document.addEventListener('DOMContentLoaded', () => {
+      const userInput = document.getElementById('login-user-input');
       const input = document.getElementById('login-pw-input');
+      userInput.addEventListener('keydown', e => { if (e.key === 'Enter') input.focus(); });
       input.addEventListener('keydown', e => { if (e.key === 'Enter') attemptLogin(); });
-      input.focus();
+      userInput.focus();
     });
   }
 })();
@@ -2252,8 +2332,21 @@ const UI_ICONS = {
   check: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>',
   pin: '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a7 7 0 0 1 7 7c0 5-7 13-7 13S5 14 5 9a7 7 0 0 1 7-7z"/><circle cx="12" cy="9" r="2.3"/></svg>',
   trash: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>',
-  lock: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="4.5" y="10.5" width="15" height="10" rx="2"/><path d="M8 10.5V7a4 4 0 0 1 8 0v3.5"/></svg>'
+  lock: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="4.5" y="10.5" width="15" height="10" rx="2"/><path d="M8 10.5V7a4 4 0 0 1 8 0v3.5"/></svg>',
+  flask: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 2h6"/><path d="M10 2v6.3L4.6 18a2 2 0 0 0 1.8 3h11.2a2 2 0 0 0 1.8-3L14 8.3V2"/><path d="M7.3 14.5h9.4"/></svg>'
 };
+
+/* ═══════════════════ CAMPIONI ↔ PIANTE (link) ═══════════════════ */
+// Un campione è collegato a un rilievo (rilievodId) e a una o più piante di
+// quel rilievo (piante[] = array di codici). Nessun dato duplicato sulla
+// pianta stessa: il collegamento si ricava sempre da qui, così resta sempre
+// aggiornato anche se un campione viene modificato o eliminato in seguito.
+function getCampioniForPlant(rilievodId, codice) {
+  return campioni.filter(c => c.rilievodId === rilievodId && Array.isArray(c.piante) && c.piante.includes(codice));
+}
+function campioniCodiciForPlant(rilievodId, codice) {
+  return getCampioniForPlant(rilievodId, codice).map(c => c.codice || '(senza codice)').join(', ');
+}
 
 /* ═══════════════════ SELECT CUSTOM (fix Android) ═══════════════════ */
 // Sostituisce visivamente ogni <select> con un div "sel-face" interamente
@@ -2292,8 +2385,6 @@ function enhanceAllSelects() {
   enhanceSelect('cf-rilievo',      'sel-face-form');
   enhanceSelect('cf-parte',        'sel-face-form');
   enhanceSelect('cf-tipo',         'sel-face-form');
-  enhanceSelect('cf-stato',        'sel-face-form');
-  enhanceSelect('cf-conservazione','sel-face-form');
   enhanceSelect('rl-sort',         'sel-face-compact', { inline: true });
   enhanceSelect('rie-stato',       'sel-face-mid');
 }
@@ -2445,7 +2536,7 @@ function renderAziende() {
     list.innerHTML = '<div class="empty"><p>Nessun risultato</p></div>';
     return;
   }
-  list.innerHTML = filtered.sort((a,b) => a.nome.localeCompare(b.nome)).map(a => {
+  list.innerHTML = filtered.sort((a,b) => a.nome.localeCompare(b.nome, 'it', {sensitivity:'base'})).map(a => {
     const nV = vineyards.filter(v => v.aziendaId === a.id).length;
     return `<div class="vineyard-card" onclick="editAzienda('${a.id}')">
       <div class="vineyard-card-body">
@@ -2570,7 +2661,7 @@ window.onload = () => {
   const opts = { weekday:'long', year:'numeric', month:'long', day:'numeric' };
   const ds = now.toLocaleDateString('it-IT', opts);
   document.getElementById('home-date-str').textContent = ds;
-  document.getElementById('topbar-date').textContent = now.toLocaleDateString('it-IT', {day:'2-digit', month:'short'});
+  updateTopbarUser();
   renderHome();
   populateRilieviSelect();
   enhanceAllSelects();
@@ -2702,7 +2793,7 @@ function renderVineyards() {
     list.innerHTML = '<div class="empty"><p>Nessun vigneto per questa azienda</p></div>';
     return;
   }
-  list.innerHTML = filtered.map(v => {
+  list.innerHTML = [...filtered].sort((a,b) => (a.name||'').localeCompare(b.name||'', 'it', {sensitivity:'base'})).map(v => {
     const vRilievi = rilievi.filter(r => r.vineyardId === v.id);
     const lastR = vRilievi.sort((a,b) => b.date.localeCompare(a.date))[0];
     return `<div class="vineyard-card" onclick="openVineyard('${v.id}')">
@@ -2946,7 +3037,7 @@ function renderSelectVineyardList() {
     return;
   }
 
-  list.innerHTML = filtered.map(function(v) {
+  list.innerHTML = [...filtered].sort((a,b) => (a.name||'').localeCompare(b.name||'', 'it', {sensitivity:'base'})).map(function(v) {
     const vr   = rilievi.filter(r => r.vineyardId === v.id);
     const last  = vr.slice().sort((a,b) => b.date.localeCompare(a.date))[0];
     const meta  = [v.azienda, v.loc, v.varieta].filter(Boolean).join(' · ');
@@ -3032,7 +3123,7 @@ function initRilievo(vineyardId, startFilare) {
     filari: v.filari || null,
     piantaPerFilare: v.piantaPerFilare || null,
     date: new Date().toISOString().split('T')[0],
-    operatore: 'Agronomo',
+    operatore: getCurrentUserName(),
     plants: [],
     status: 'in_corso',
     // Salva il protocollo attivo nel rilievo
@@ -3054,14 +3145,6 @@ function initRilievo(vineyardId, startFilare) {
   if (_spw) _spw.style.display = 'none';
   const _spi = document.getElementById('start-pos-input');
   if (_spi) _spi.value = 1;
-
-  // Banner protocollo
-  const banner = document.getElementById('ril-protocol-banner');
-  if (banner) {
-    banner.style.display = activeProtocol.id === 'standard' ? 'none' : '';
-    document.getElementById('ril-proto-name').textContent = activeProtocol.name;
-    document.getElementById('ril-proto-desc').textContent = activeProtocol.desc || '';
-  }
 
   // Bottoni classificazione dinamici
   renderClassifButtons();
@@ -3277,6 +3360,56 @@ function advancePlant() {
   window.scrollTo(0, 100);
 }
 
+// Rimappa le posizioni "provvisorie" (sequenza dal fondo) di un filare in
+// posizioni definitive, ricalcolando il codice pianta di conseguenza — e
+// aggiorna coerentemente anche gli eventuali campioni già prelevati durante
+// il rilievo su quelle piante, che altrimenti resterebbero legati al codice
+// provvisorio (es. P008) invece di quello reale/definitivo (es. P002).
+// Centralizzata qui perché la stessa logica di rimappatura serve in tre punti
+// (fine filare, cambio filare "al volo", chiusura rilievo).
+function remapFilareDaFondo(plants, filare, prefix, rilievodId) {
+  const pianteFilare = plants.filter(p => p.filare === filare);
+  const erafondo = pianteFilare.length > 0 && pianteFilare.every(p => p._fromBottom);
+  if (!erafondo) return;
+  const N = pianteFilare.length;
+  // Ordina per sequenza crescente (1ª rilevata, 2ª rilevata, …)
+  pianteFilare.sort((a, b) => a.posizione - b.posizione);
+  const mappaCodici = {}; // vecchio codice provvisorio -> pianta con codice definitivo
+  pianteFilare.forEach((p, i) => {
+    const vecchioCodice = p.codice;
+    // sequenza i+1 (1=prima rilevata dal fondo) → posizione finale = N - i
+    // così l'ULTIMA rilevata (sequenza N) diventa posizione 1 (= inizio filare)
+    p.posizione = N - i;
+    p.codice = `${prefix}-R${String(p.filare).padStart(2,'0')}-P${String(p.posizione).padStart(3,'0')}`;
+    delete p._fromBottom;
+    if (vecchioCodice !== p.codice) mappaCodici[vecchioCodice] = p;
+  });
+
+  if (Object.keys(mappaCodici).length === 0 || !rilievodId || typeof campioni === 'undefined') return;
+  let campioniAggiornati = false;
+  campioni.forEach(c => {
+    if (c.rilievodId !== rilievodId || !Array.isArray(c.piante)) return;
+    let toccato = false;
+    c.piante = c.piante.map(cod => {
+      const nuova = mappaCodici[cod];
+      if (nuova) { toccato = true; return nuova.codice; }
+      return cod;
+    });
+    if (Array.isArray(c.pianteDettaglio)) {
+      c.pianteDettaglio = c.pianteDettaglio.map(pd => {
+        const nuova = mappaCodici[pd.codice];
+        if (nuova) { toccato = true; return { ...pd, codice: nuova.codice, posizione: nuova.posizione }; }
+        return pd;
+      });
+    }
+    if (toccato) campioniAggiornati = true;
+  });
+  if (campioniAggiornati) {
+    saveCampioniData();
+    showToast('Codice campione aggiornato: posizione pianta ricalcolata a fine filare');
+  }
+}
+
 function nextFilare() {
   if (!activeRilievo) return;
   vibrate(20);
@@ -3285,21 +3418,7 @@ function nextFilare() {
   // le posizioni: la pianta più recente (sequenza più alta) diventa P001,
   // la prima rilevata diventa P-N. La lunghezza N è il numero EFFETTIVO
   // di piante rilevate in questo filare (non quella del filare precedente).
-  const pianteFilare = activeRilievo.plants.filter(p => p.filare === currentFilare);
-  const erafondo = pianteFilare.length > 0 && pianteFilare.every(p => p._fromBottom);
-  if (erafondo) {
-    const N = pianteFilare.length;
-    const prefix = activeRilievo.prefix;
-    // Ordina per sequenza crescente (1ª rilevata, 2ª rilevata, …)
-    pianteFilare.sort((a, b) => a.posizione - b.posizione);
-    pianteFilare.forEach((p, i) => {
-      // sequenza i+1 (1=prima rilevata dal fondo) → posizione finale = N - i
-      // così l'ULTIMA rilevata (sequenza N) diventa posizione 1 (= inizio filare)
-      p.posizione = N - i;
-      p.codice = `${prefix}-R${String(p.filare).padStart(2,'0')}-P${String(p.posizione).padStart(3,'0')}`;
-      delete p._fromBottom;
-    });
-  }
+  remapFilareDaFondo(activeRilievo.plants, currentFilare, activeRilievo.prefix, activeRilievo.id);
 
   currentFilare++;
 
@@ -3360,17 +3479,7 @@ function confirmGoToFilare() {
 // — stessa logica di nextFilare()/confirmCompleteRilievo() — altrimenti
 // resterebbero con posizioni temporanee (sequenza) invece che definitive.
 function _finalizzaFilareSeAncoraPendente(filare) {
-  const piante = activeRilievo.plants.filter(p => p.filare === filare);
-  const erafondo = piante.length > 0 && piante.every(p => p._fromBottom);
-  if (!erafondo) return;
-  const N = piante.length;
-  const prefix = activeRilievo.prefix;
-  piante.sort((a, b) => a.posizione - b.posizione);
-  piante.forEach((p, i) => {
-    p.posizione = N - i;
-    p.codice = `${prefix}-R${String(p.filare).padStart(2,'0')}-P${String(p.posizione).padStart(3,'0')}`;
-    delete p._fromBottom;
-  });
+  remapFilareDaFondo(activeRilievo.plants, filare, activeRilievo.prefix, activeRilievo.id);
 }
 
 function goToFilare(n) {
@@ -3555,13 +3664,6 @@ function resumeRilievo(id) {
   document.getElementById('dir-from').classList.toggle('active', currentDir === 'from');
   document.getElementById('dir-to').classList.toggle('active', currentDir === 'to');
 
-  const banner = document.getElementById('ril-protocol-banner');
-  if (banner) {
-    banner.style.display = activeProtocol.id === 'standard' ? 'none' : '';
-    document.getElementById('ril-proto-name').textContent = activeProtocol.name;
-    document.getElementById('ril-proto-desc').textContent = activeProtocol.desc || '';
-  }
-
   renderClassifButtons();
   updateRilievoUI();
   startGPS();
@@ -3630,22 +3732,9 @@ function confirmCompleteRilievo() {
   // Se l'ultimo filare è stato rilevato "dal fondo" e l'agronomo
   // non ha premuto "Filare succ.", rimappiamo qui le sue posizioni.
   const prefix = activeRilievo.prefix;
-  const filariConFondo = {};
-  activeRilievo.plants.forEach(p => {
-    if (p._fromBottom) {
-      (filariConFondo[p.filare] = filariConFondo[p.filare] || []).push(p);
-    }
-  });
-  Object.keys(filariConFondo).forEach(fStr => {
-    const arr = filariConFondo[fStr];
-    const N = arr.length;
-    arr.sort((a, b) => a.posizione - b.posizione);
-    arr.forEach((p, i) => {
-      p.posizione = N - i;
-      p.codice = `${prefix}-R${String(p.filare).padStart(2,'0')}-P${String(p.posizione).padStart(3,'0')}`;
-      delete p._fromBottom;
-    });
-  });
+  const filariConFondo = new Set();
+  activeRilievo.plants.forEach(p => { if (p._fromBottom) filariConFondo.add(p.filare); });
+  filariConFondo.forEach(f => remapFilareDaFondo(activeRilievo.plants, f, prefix, activeRilievo.id));
 
   activeRilievo.status = 'completato';
   // Upsert per id (non un push incondizionato): se il rilievo era già presente
@@ -3741,7 +3830,8 @@ function openRilievo(id) {
         ? 'openPlantEditModal(\'' + r.id + '\',' + p.filare + ',' + p.posizione + ')'
         : 'openPlantModal(' + JSON.stringify(p).replace(/"/g,'&quot;') + ')';
       const ring = plantEditMode ? ' box-shadow:0 0 0 2px var(--amber);' : '';
-      html += `<div class="plant-cell" style="background:${col};${ring}" onclick="${action}">${p.posizione}</div>`;
+      const hasSample = !plantEditMode && getCampioniForPlant(r.id, p.codice).length > 0;
+      html += `<div class="plant-cell${hasSample ? ' has-sample' : ''}" style="background:${col};${ring}" onclick="${action}">${p.posizione}</div>`;
     });
     html += '</div>';
   });
@@ -3768,6 +3858,21 @@ function openPlantModal(p) {
   document.getElementById('pm-lon').textContent = p.lon ? p.lon.toFixed(7) : 'N/A';
   document.getElementById('pm-time').textContent = p.timestamp ? new Date(p.timestamp).toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'}) : '—';
   document.getElementById('pm-note-wrap').textContent = p.note || '';
+  const smp = getCampioniForPlant(currentRilievodId, p.codice);
+  const smpWrap = document.getElementById('pm-smp-wrap');
+  if (smp.length > 0) {
+    smpWrap.style.display = '';
+    document.getElementById('pm-smp-list').innerHTML = smp.map(c =>
+      `<div style="display:flex;align-items:center;gap:6px;font-size:12px;background:#E6F5F5;border-radius:8px;padding:5px 8px;">` +
+        `<span style="color:#0D7680;">${UI_ICONS.flask}</span>` +
+        `<span style="font-family:var(--font-mono);font-weight:700;">${esc(c.codice||'—')}</span>` +
+        `<span style="color:var(--text-soft);">${esc(c.tipo||'')}${c.data ? ' · ' + esc(c.data) : ''}</span>` +
+      `</div>`
+    ).join('');
+  } else {
+    smpWrap.style.display = 'none';
+    document.getElementById('pm-smp-list').innerHTML = '';
+  }
   document.getElementById('plant-modal').classList.add('open');
 }
 
@@ -4026,19 +4131,20 @@ function _stdClasses() {
 function exportRilievoCsv() {
   const r = rilievi.find(x => x.id === currentRilievodId);
   if (!r) return;
-  downloadCsv(r.plants, `${r.vineyardName}_${r.date}.csv`);
+  const plants = r.plants.map(p => ({...p, _campioniCodici: campioniCodiciForPlant(r.id, p.codice)}));
+  downloadCsv(plants, `${r.vineyardName}_${r.date}.csv`);
 }
 
 function exportAllCsv() {
   const selVal = document.getElementById('stats-sel').value;
   let plants, fname;
   if (selVal === 'all') {
-    plants = rilievi.flatMap(r => r.plants.map(p => ({...p, _rilievo: r.date, _vigneto: r.vineyardName})));
+    plants = rilievi.flatMap(r => r.plants.map(p => ({...p, _rilievo: r.date, _vigneto: r.vineyardName, _campioniCodici: campioniCodiciForPlant(r.id, p.codice)})));
     fname = 'VignaTrace_export_completo.csv';
   } else {
     const r = rilievi.find(x => x.id === selVal);
     if (!r) return;
-    plants = r.plants.map(p => ({...p, _rilievo: r.date, _vigneto: r.vineyardName}));
+    plants = r.plants.map(p => ({...p, _rilievo: r.date, _vigneto: r.vineyardName, _campioniCodici: campioniCodiciForPlant(r.id, p.codice)}));
     fname = `${r.vineyardName}_${r.date}.csv`;
   }
   downloadCsv(plants, fname, true);
@@ -4046,13 +4152,16 @@ function exportAllCsv() {
 
 function downloadCsv(plants, fname, withVigneto = false) {
   const headers = withVigneto
-    ? ['Vigneto','Data Rilievo','Filare','Posizione','Codice Pianta','Classificazione','Latitudine','Longitudine','Note','Timestamp']
-    : ['Filare','Posizione','Codice Pianta','Classificazione','Latitudine','Longitudine','Note','Timestamp'];
+    ? ['Vigneto','Data Rilievo','Filare','Posizione','Codice Pianta','Classificazione','Latitudine','Longitudine','Note','Timestamp','Campionata','Codice/i campione']
+    : ['Filare','Posizione','Codice Pianta','Classificazione','Latitudine','Longitudine','Note','Timestamp','Campionata','Codice/i campione'];
 
-  const rows = plants.map(p => withVigneto
-    ? [p._vigneto||'', p._rilievo||'', p.filare, p.posizione, p.codice, p.classificazione, p.lat||'', p.lon||'', p.note||'', p.timestamp||'']
-    : [p.filare, p.posizione, p.codice, p.classificazione, p.lat||'', p.lon||'', p.note||'', p.timestamp||'']
-  );
+  const rows = plants.map(p => {
+    const smpCodici = p._campioniCodici || '';
+    const base = withVigneto
+      ? [p._vigneto||'', p._rilievo||'', p.filare, p.posizione, p.codice, p.classificazione, p.lat||'', p.lon||'', p.note||'', p.timestamp||'']
+      : [p.filare, p.posizione, p.codice, p.classificazione, p.lat||'', p.lon||'', p.note||'', p.timestamp||''];
+    return [...base, smpCodici ? 'Sì' : 'No', smpCodici];
+  });
 
   const csv = [headers, ...rows].map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
   const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
@@ -4073,9 +4182,8 @@ function showToast(msg) {
   setTimeout(() => t.classList.remove('show'), 2500);
 }
 
-/* ═══════════════════ DATE INIT ═══════════════════ */
-document.getElementById('topbar-date').textContent =
-  new Date().toLocaleDateString('it-IT', {day:'2-digit', month:'short'});
+/* ═══════════════════ TOPBAR USER ═══════════════════ */
+updateTopbarUser();
 
 
 /* ══════ RILIEVI LIST ══════ */
@@ -4547,21 +4655,21 @@ function openNewCampione() {
     const el = document.getElementById(id);
     if (el) { el.value = ''; if (el._syncFace) el._syncFace(); }
   });
-  setSel('cf-stato', 'Prelevato');
-  setSel('cf-conservazione', '');
   document.getElementById('cf-piante-wrap').style.display = 'none';
   document.getElementById('cf-data').value = new Date().toISOString().split('T')[0];
+  document.getElementById('cf-operatore').value = getCurrentUserName();
+  document.getElementById('cf-codice').value = generateCampioneCodice(document.getElementById('cf-data').value);
   showPage('page-campione-form', 'Nuovo campione');
 }
 
-function loadPiantePicker() {
+function loadPiantePicker(preserveSelection) {
   const rilId = document.getElementById('cf-rilievo').value;
   const wrap = document.getElementById('cf-piante-wrap');
-  if (!rilId) { wrap.style.display = 'none'; selectedPiante = []; return; }
+  if (!rilId) { wrap.style.display = 'none'; if (!preserveSelection) selectedPiante = []; return; }
   const r = rilievi.find(x => x.id === rilId);
   if (!r || r.plants.length === 0) { wrap.style.display = 'none'; return; }
   wrap.style.display = '';
-  selectedPiante = [];
+  if (!preserveSelection) selectedPiante = [];
   renderPiantePicker(r);
 }
 
@@ -4655,6 +4763,8 @@ function saveCampione() {
   // Array dettagliato delle piante campionate (con GPS se disponibile)
   const pianteDettaglio = selectedPiante.map(cod => pianteGps[cod] || { codice: cod, lat: null, lon: null });
 
+  const existingC = editingCampioneId ? campioni.find(x => x.id === editingCampioneId) : null;
+
   const campoComuni = {
     codice:        document.getElementById('cf-codice').value,
     rilievodId:    rilId,
@@ -4667,8 +4777,8 @@ function saveCampione() {
     data,
     nContenitori:  document.getElementById('cf-ncontenitori').value,
     operatore:     document.getElementById('cf-operatore').value,
-    stato:         document.getElementById('cf-stato').value,
-    conservazione: document.getElementById('cf-conservazione').value,
+    stato:         existingC ? (existingC.stato || 'Prelevato') : 'Prelevato',
+    conservazione: existingC ? (existingC.conservazione || '') : '',
     note:          document.getElementById('cf-note').value,
   };
 
@@ -4685,6 +4795,11 @@ function saveCampione() {
   renderHome();
   goBack();
   renderCampioni();
+  // Se si torna al rilievo in corso (campionamento avviato "al volo" durante
+  // la fase di rilievo), aggiorna subito la striscia "ultime piante" e la
+  // griglia piante così il nuovo campione compare senza dover uscire e rientrare.
+  if (activeRilievo && currentPage === 'page-rilievo') renderRecentEntries();
+  if (currentRilievodId && currentPage === 'page-rilievo-detail') openRilievo(currentRilievodId);
 }
 
 function renderCampioni() {
@@ -4699,28 +4814,48 @@ function renderCampioni() {
       || (c.vineyardName||'').toLowerCase().includes(search);
     return ms && mq;
   });
-  filtered.sort((a,b) => (b.data||'').localeCompare(a.data||''));
 
   if (filtered.length === 0) {
     list.innerHTML = '<div class="empty" style="padding:40px 0"><p>' + (campioni.length === 0 ? 'Nessun campione ancora' : 'Nessun risultato') + '</p></div>';
     return;
   }
+
+  // Raggruppa per vigneto (ordine alfabetico dei nomi vigneto)
+  const groups = {};
+  filtered.forEach(c => {
+    const key = c.vineyardName || '—';
+    (groups[key] = groups[key] || []).push(c);
+  });
+  const groupNames = Object.keys(groups).sort((a,b) => a.localeCompare(b, 'it', {sensitivity:'base'}));
+
+  // All'interno dello stesso vigneto: ordina per data, poi in ordine alfabetico (codice)
+  groupNames.forEach(name => {
+    groups[name].sort((a,b) => {
+      const d = (b.data||'').localeCompare(a.data||'');
+      if (d !== 0) return d;
+      return (a.codice||'').localeCompare(b.codice||'', 'it', {sensitivity:'base'});
+    });
+  });
+
   const STATO_CLR = {Prelevato:'#F59E0B',Inviato:'#3B82F6','In analisi':'#A855F7',Refertato:'#22C55E',Archiviato:'#9CA3AF'};
-  list.innerHTML = filtered.map(c => {
-    const sc = STATO_CLR[c.stato] || '#9CA3AF';
-    return `<div class="ril-card" onclick="openSmpModal('${c.id}')">`+
-      `<div class="ril-card-body">`+
-        `<div class="ril-strip" style="background:#0D7680"></div>`+
-        `<div class="ril-inner">`+
-          `<div class="ril-vineyard">${c.codice ? esc(c.codice) + ' — ' : ''}${esc(c.tipo)||'—'}</div>`+
-          `<div class="ril-date">${esc(c.data)||'—'}${c.operatore ? ' · ' + esc(c.operatore) : ''}</div>`+
-          `<div class="ril-meta">${c.piante ? c.piante.length : 0} piante · ${esc(c.parte)||'—'}${c.laboratorio ? ' · ' + esc(c.laboratorio) : ''}</div>`+
+  list.innerHTML = groupNames.map(name => {
+    const cards = groups[name].map(c => {
+      const sc = STATO_CLR[c.stato] || '#9CA3AF';
+      return `<div class="ril-card" onclick="openSmpModal('${c.id}')">`+
+        `<div class="ril-card-body">`+
+          `<div class="ril-strip" style="background:#0D7680"></div>`+
+          `<div class="ril-inner">`+
+            `<div class="ril-vineyard">${c.codice ? esc(c.codice) + ' — ' : ''}${esc(c.tipo)||'—'}</div>`+
+            `<div class="ril-date">${esc(c.data)||'—'}${c.operatore ? ' · ' + esc(c.operatore) : ''}</div>`+
+            `<div class="ril-meta">${c.piante ? c.piante.length : 0} piante · ${esc(c.parte)||'—'}${c.laboratorio ? ' · ' + esc(c.laboratorio) : ''}</div>`+
+          `</div>`+
+          `<div class="ril-right">`+
+            `<span style="font-size:11px;font-weight:700;color:${sc}">${c.stato||'—'}</span>`+
+          `</div>`+
         `</div>`+
-        `<div class="ril-right">`+
-          `<span style="font-size:11px;font-weight:700;color:${sc}">${c.stato||'—'}</span>`+
-        `</div>`+
-      `</div>`+
-    `</div>`;
+      `</div>`;
+    }).join('');
+    return `<div class="section-label">${esc(name)}</div>` + cards;
   }).join('');
 }
 
@@ -4803,7 +4938,7 @@ function editCampioneFromModal() {
   if (sel._syncFace) sel._syncFace();
   document.getElementById('cf-codice').value = c.codice || '';
   selectedPiante = [...(c.piante || [])];
-  loadPiantePicker();
+  loadPiantePicker(true);
   setSel('cf-parte', c.parte || '');
   // Set tipo
   const tipoSel = document.getElementById('cf-tipo');
@@ -4813,8 +4948,6 @@ function editCampioneFromModal() {
   document.getElementById('cf-data').value = c.data || '';
   document.getElementById('cf-ncontenitori').value = c.nContenitori || '';
   document.getElementById('cf-operatore').value = c.operatore || '';
-  setSel('cf-stato', c.stato || 'Prelevato');
-  setSel('cf-conservazione', c.conservazione || '');
   document.getElementById('cf-note').value = c.note || '';
   showPage('page-campione-form', 'Modifica campione');
 }
@@ -5068,12 +5201,37 @@ function renderRecentEntries() {
   box.innerHTML = recent.map((p, i) => {
     const color = clsColorForRilievo(p.classificazione, activeRilievo);
     const codeShort = p.codice.split('-').slice(1).join('-'); // es. R02-P015, senza il prefisso vigneto
+    const smp = getCampioniForPlant(activeRilievo.id, p.codice);
+    const smpBadge = smp.length > 0
+      ? `<span class="rc-smp" title="Campionata: ${esc(smp.map(s => s.codice || '—').join(', '))}">${UI_ICONS.flask}${smp.length > 1 ? smp.length : ''}</span>`
+      : '';
     return `<div class="ril-recent-chip${i === 0 ? ' is-last' : ''}">
       <span class="rc-dot" style="background:${color}"></span>
       <span class="rc-code">${codeShort}</span>
       <span class="rc-cls">${p.classificazione}</span>
+      ${smpBadge}
+      <button type="button" class="rc-smp-btn" onclick="event.stopPropagation();quickSampleFromRilievo('${p.codice}')" title="Campiona questa pianta">${UI_ICONS.flask}</button>
     </div>`;
   }).join('');
+}
+
+// Avvia la creazione di un campione per una pianta appena rilevata, senza dover
+// uscire dal rilievo in corso: salva subito lo stato (così la pianta è presente
+// nel form) e apre il form campione precompilato con rilievo e pianta corretti.
+// Al salvataggio (o all'annullamento) si torna automaticamente al rilievo,
+// esattamente al punto in cui si era rimasti.
+function quickSampleFromRilievo(codice) {
+  if (!activeRilievo) return;
+  clearTimeout(_autosaveTimer);
+  persistRilievoProgress(); // il rilievo (con questa pianta) dev'essere già salvato per comparire nel form campione
+
+  openNewCampione();
+  const sel = document.getElementById('cf-rilievo');
+  sel.value = activeRilievo.id;
+  if (sel._syncFace) sel._syncFace();
+  loadPiantePicker();
+  togglePianta(codice);
+  showToast('Pianta ' + codice.split('-').slice(1).join('-') + ' selezionata per il campionamento');
 }
 
 function renderClassifButtons() {
