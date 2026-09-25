@@ -843,9 +843,14 @@ body.rilievo-fullscreen #bottom-nav { display: none; }
   position: relative;
 }
 /* Variante mappa reale (Leaflet): occupa tutto lo spazio verticale ancora
-   disponibile nella pagina, invece della piccola anteprima fissa precedente. */
+   disponibile nella pagina, invece della piccola anteprima fissa precedente.
+   Va sottratto anche il safe-area-inset-bottom: il menu di navigazione fisso
+   in basso cresce di quella quantità sui dispositivi con home indicator/notch
+   (padding-bottom: env(safe-area-inset-bottom)), quindi senza sottrarlo qui
+   la mappa risulta leggermente più alta del disponibile e ne sborda sotto,
+   coprendo in parte i pulsanti del menu. */
 .map-canvas-wrap.gps-live {
-  height: calc(100dvh - 300px);
+  height: calc(100dvh - 300px - env(safe-area-inset-bottom, 0px));
   min-height: 360px;
 }
 #leaflet-map {
@@ -1368,7 +1373,7 @@ body.rilievo-fullscreen #bottom-nav { display: none; }
         <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a9 9 0 0 1 9 9c0 4.17-2.84 7.67-6.75 8.68L12 22l-2.25-2.32C5.84 18.67 3 15.17 3 11a9 9 0 0 1 9-9z"/><circle cx="12" cy="11" r="3"/></svg>
       </div>
       <div>
-        <div class="home-hero-title">VignApp Map</div>
+        <div class="home-hero-title">VignApp Map <span style="font-size:11px; font-weight:600; opacity:.65; vertical-align:middle;">v. 20</span></div>
         <div class="home-hero-sub">App per rilievi puntuali pianta/pianta</div>
         <div id="home-date-str" style="font-size:11px;opacity:.55;margin-top:4px;text-transform:capitalize;letter-spacing:.2px;"></div>
       </div>
@@ -1438,11 +1443,7 @@ body.rilievo-fullscreen #bottom-nav { display: none; }
       </button>
     </div>
   </div>
-  <div class="riliev-sel" style="padding-top:0">
-    <select id="vy-azienda-filter" onchange="renderVineyards()">
-      <option value="">Tutte le aziende</option>
-    </select>
-  </div>
+  <div class="vig-filter" id="vy-azienda-filter"></div>
   <div class="vineyard-cards" id="vineyard-list"></div>
 </div>
 
@@ -1694,22 +1695,6 @@ body.rilievo-fullscreen #bottom-nav { display: none; }
   <div class="dir-selector">
     <button class="dir-btn active" id="dir-from" onclick="setDir('from')">⊣ Dall'inizio</button>
     <button class="dir-btn" id="dir-to" onclick="setDir('to')">Dal fondo ⊢</button>
-  </div>
-  <!-- Banner informativo: visibile solo quando si parte dal fondo.
-       Niente lunghezza precompilata: l'agronomo rileva pianta per pianta
-       e il programma assegna le posizioni corrette quando il filare viene chiuso. -->
-  <div id="start-pos-wrap" style="display:none; padding:6px 12px; background:#FFF8E1; border-bottom:1px solid #F1D788;">
-    <div style="display:flex; align-items:flex-start; gap:8px;">
-      <div style="font-size:14px; line-height:1; margin-top:2px;">↩︎</div>
-      <div style="flex:1;">
-        <div style="font-size:11px; color:#7A5A00; font-weight:700;">Rilievo dal fondo</div>
-        <div style="font-size:10px; color:#7A5A00; line-height:1.4; margin-top:1px;">
-          Rileva la <b>1ª pianta dal fondo</b>, poi la 2ª, la 3ª… Quando premi
-          <b>“Filare succ.”</b> le posizioni vengono assegnate automaticamente
-          (la più recente diventa la <b>n.1</b>).
-        </div>
-      </div>
-    </div>
   </div>
 
   <div class="gps-bar">
@@ -2379,7 +2364,6 @@ function enhanceSelect(id, faceClass, opts) {
 
 function enhanceAllSelects() {
   enhanceSelect('map-rilievo-sel',   'sel-face-mid', { flex: true });
-  enhanceSelect('vy-azienda-filter', 'sel-face-mid', { flex: true });
   enhanceSelect('nv-azienda-sel',    'sel-face-form');
   enhanceSelect('stats-sel',       'sel-face-mid');
   enhanceSelect('cf-rilievo',      'sel-face-form');
@@ -2645,6 +2629,12 @@ function deleteAzienda() {
 
 /* ═══════════════════ ACTIVE RILIEVO STATE ═══════════════════ */
 let activeRilievo = null;       // {vineyardId, name, prefix, filari, piantaPerFilare, plants[], date, operatore}
+// Copia del rilievo COM'ERA prima della sessione di lavoro corrente (solo per
+// un rilievo RIPRESO, non per uno nuovo). Serve a "Esci senza salvare" per
+// annullare davvero le modifiche fatte in questa sessione — comprese quelle
+// già scritte dall'autosave — invece di lasciarle salvate per errore.
+// null = il rilievo attivo è nuovo di questa sessione (prima non esisteva).
+let _rilievoSnapshotPrimaSessione = null;
 let currentFilare = 1;
 let currentPianta = 1;
 let currentDir = 'from';        // 'from' = dall'inizio, 'to' = dal fondo
@@ -2748,7 +2738,7 @@ function renderHome() {
   document.getElementById('hs-piante').textContent = tot;
   var hsr=document.getElementById('hs-r-sub');if(hsr)hsr.textContent=rilievi.length+' rilievi';
   var hsc2=document.getElementById('hs-c-sub');if(hsc2&&typeof campioni!=='undefined')hsc2.textContent=campioni.length+' campioni';
-  var hsp=document.getElementById('hs-proto-sub');if(hsp){const np=customProtocols.length+(BUILTIN_PROTOCOLS.length-deletedBuiltinIds.length);hsp.textContent=np+' protocolli disponibili';}
+  var hsp=document.getElementById('hs-proto-sub');if(hsp){const np=customProtocols.length+Math.max(0,BUILTIN_PROTOCOLS.length-deletedBuiltinIds.length);hsp.textContent=np+' protocolli disponibili';}
   const recent = document.getElementById('home-recent');
   if (rilievi.length === 0) {
     recent.innerHTML = '<div class="empty"><p>Nessun rilievo ancora</p></div>';
@@ -2769,21 +2759,31 @@ function renderHome() {
 }
 
 /* ═══════════════════ VIGNETI ═══════════════════ */
+let vyAziendaFilter = ''; // '' = tutte le aziende
+function setVyAziendaFilter(el) {
+  vyAziendaFilter = (el && el.dataset.azienda) || '';
+  renderVineyards();
+}
+
 function renderVineyards() {
   const list = document.getElementById('vineyard-list');
 
-  // Popola il filtro aziende (solo aziende realmente presenti, in ordine alfabetico)
-  const filterSel = document.getElementById('vy-azienda-filter');
-  const aziende = [...new Set(vineyards.map(v => v.azienda).filter(Boolean))].sort((a,b) => a.localeCompare(b));
-  const curFilter = filterSel.value;
-  filterSel.innerHTML = '<option value="">Tutte le aziende</option>' +
-    aziende.map(a => `<option value="${esc(a)}">${esc(a)}</option>`).join('');
-  if (aziende.includes(curFilter)) filterSel.value = curFilter;
-  if (filterSel._syncFace) filterSel._syncFace();
-  filterSel.parentElement.style.display = aziende.length > 1 ? '' : 'none';
+  // Filtro aziende come chip orizzontali — stesso stile del filtro vigneto
+  // nella lista Rilievi (.vig-filter/.vig-chip), non più un menu a tendina.
+  // Solo aziende realmente presenti, in ordine alfabetico.
+  const ff = document.getElementById('vy-azienda-filter');
+  const aziendeNomi = [...new Set(vineyards.map(v => v.azienda).filter(Boolean))].sort((a,b) => a.localeCompare(b, 'it', {sensitivity:'base'}));
+  if (!aziendeNomi.includes(vyAziendaFilter)) vyAziendaFilter = '';
+  if (ff) {
+    ff.style.display = aziendeNomi.length > 1 ? '' : 'none';
+    ff.innerHTML = '<div class="vig-chip ' + (vyAziendaFilter === '' ? 'active' : '') + '" data-azienda="" onclick="setVyAziendaFilter(this)">Tutte le aziende</div>' +
+      aziendeNomi.map(a => {
+        const active = vyAziendaFilter === a ? 'active' : '';
+        return '<div class="vig-chip ' + active + '" data-azienda="' + esc(a) + '" onclick="setVyAziendaFilter(this)">' + esc(a) + '</div>';
+      }).join('');
+  }
 
-  const selectedAzienda = filterSel.value;
-  const filtered = selectedAzienda ? vineyards.filter(v => v.azienda === selectedAzienda) : vineyards;
+  const filtered = vyAziendaFilter ? vineyards.filter(v => v.azienda === vyAziendaFilter) : vineyards;
 
   if (vineyards.length === 0) {
     list.innerHTML = '<div class="empty"><svg width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><circle cx="12" cy="5" r="3"/><path d="M12 8C8 8 5 11 5 15L5 20L9 20L9 15C9 13 10 12 12 12C14 12 15 13 15 15L15 20L19 20L19 15C19 11 16 8 12 8Z"/></svg><p>Nessun vigneto ancora</p></div>';
@@ -3063,6 +3063,11 @@ function renderSelectVineyardList() {
 let _pendingStartVineyardId = null;
 
 function openStartFilareModal(vineyardId) {
+  if (!activeProtocol) {
+    showToast('Crea prima un protocollo di rilievo');
+    openProtocolSelection();
+    return;
+  }
   _pendingStartVineyardId = vineyardId;
   const input = document.getElementById('sf-filare-input');
   if (input) input.value = 1;
@@ -3111,6 +3116,7 @@ function confirmStartFilare() {
 function initRilievo(vineyardId, startFilare) {
   const v = vineyards.find(x => x.id === vineyardId);
   if (!v) return;
+  _rilievoSnapshotPrimaSessione = null; // rilievo nuovo: prima di questa sessione non esisteva
   const vPrefix = v.prefix || (function(){
     const c = v.name.toUpperCase().replace(/[^A-Z]/g,'').replace(/[AEIOU]/g,'');
     return (c.slice(0,3) || 'VGN');
@@ -3141,8 +3147,6 @@ function initRilievo(vineyardId, startFilare) {
   currentFilare = (Number.isFinite(n) && n >= 1) ? n : 1;
   currentPianta = 1;
   currentDir = 'from';
-  const _spw = document.getElementById('start-pos-wrap');
-  if (_spw) _spw.style.display = 'none';
   const _spi = document.getElementById('start-pos-input');
   if (_spi) _spi.value = 1;
 
@@ -3220,8 +3224,6 @@ function setDir(dir) {
   document.getElementById('dir-from').classList.toggle('active', dir === 'from');
   document.getElementById('dir-to').classList.toggle('active', dir === 'to');
 
-  const wrap = document.getElementById('start-pos-wrap');
-
   // Recupera quante piante sono già state rilevate nel filare corrente
   const giaRilevate = activeRilievo
     ? activeRilievo.plants.filter(p => p.filare === currentFilare).length
@@ -3230,7 +3232,6 @@ function setDir(dir) {
   if (dir === 'from') {
     // Dall'inizio: nessuna pianta ancora rilevata -> riparte da 1
     // Se ci sono già piante (cambio direzione a metà filare) -> prossima posizione = max+1
-    wrap.style.display = 'none';
     if (giaRilevate === 0) {
       currentPianta = 1;
     } else {
@@ -3248,7 +3249,6 @@ function setDir(dir) {
     // es. rilievo ripreso dopo il completamento), non c'è alcuna sequenza da
     // riprendere: la prossima pianta diventerà sempre la nuova posizione 1 (vedi
     // classify()).
-    wrap.style.display = '';
     currentPianta = filareGiaFinalizzato(currentFilare) ? 1 : giaRilevate + 1;
   }
   updateRilievoUI();
@@ -3425,11 +3425,6 @@ function nextFilare() {
   // Il prossimo filare riparte sempre da 1 (sia come posizione reale 'from'
   // sia come 1ª pianta dal fondo 'to'). Niente lunghezza ereditata.
   currentPianta = 1;
-  if (currentDir === 'from') {
-    document.getElementById('start-pos-wrap').style.display = 'none';
-  } else {
-    document.getElementById('start-pos-wrap').style.display = '';
-  }
 
   showToast('Filare ' + currentFilare + (currentDir === 'to' ? ' — rileva dal fondo, le posizioni saranno assegnate a fine filare' : ''));
   updateRilievoUI();
@@ -3521,8 +3516,6 @@ function goToFilare(n) {
   const dirToBtn = document.getElementById('dir-to');
   if (dirFromBtn) dirFromBtn.classList.toggle('active', currentDir === 'from');
   if (dirToBtn) dirToBtn.classList.toggle('active', currentDir === 'to');
-  const spw = document.getElementById('start-pos-wrap');
-  if (spw) spw.style.display = (currentDir === 'to') ? '' : 'none';
 
   updateRilievoUI();
   scheduleAutosave();
@@ -3619,13 +3612,20 @@ window.addEventListener('pagehide', () => {
 function resumeRilievo(id) {
   const r = rilievi.find(x => x.id === id);
   if (!r) return;
-  activeRilievo = r;
-  if (r.protocollo) {
+  // Copia di lavoro indipendente dall'elenco `rilievi`: le modifiche fatte in
+  // questa sessione (classificazioni, campioni al volo, autosave periodico)
+  // non devono toccare la copia già salvata finché non si esce salvando
+  // esplicitamente — altrimenti "Esci senza salvare" non avrebbe più nulla
+  // da scartare, perché il dato sarebbe già stato modificato "sul posto".
+  _rilievoSnapshotPrimaSessione = JSON.parse(JSON.stringify(r));
+  activeRilievo = JSON.parse(JSON.stringify(r));
+  const rp = activeRilievo;
+  if (rp.protocollo) {
     activeProtocol = {
-      id: r.protocollo.id,
-      name: r.protocollo.name,
-      desc: r.protocollo.desc || '',
-      classes: r.protocollo.classes.map(c => ({...c}))
+      id: rp.protocollo.id,
+      name: rp.protocollo.name,
+      desc: rp.protocollo.desc || '',
+      classes: rp.protocollo.classes.map(c => ({...c}))
     };
   }
   if (r.status === 'in_corso' && r._progress) {
@@ -3659,8 +3659,6 @@ function resumeRilievo(id) {
     }
   }
 
-  const _spw = document.getElementById('start-pos-wrap');
-  if (_spw) _spw.style.display = 'none';
   document.getElementById('dir-from').classList.toggle('active', currentDir === 'from');
   document.getElementById('dir-to').classList.toggle('active', currentDir === 'to');
 
@@ -3697,14 +3695,37 @@ function exitRilievoSaveAndClose() {
   stopGPS();
   showToast('Rilievo salvato — riprendilo da "Rilievi" quando vuoi');
   activeRilievo = null;
+  _rilievoSnapshotPrimaSessione = null;
   renderHome();
   goBack();
 }
 
+// "Esci senza salvare": deve annullare DAVVERO le modifiche di questa sessione,
+// comprese quelle già scritte nel frattempo dall'autosave periodico (che scrive
+// su localStorage ogni ~1.2s per non perdere lavoro in caso di blocco
+// dell'app) — altrimenti il rilievo risulterebbe comunque salvato anche
+// scegliendo "non salvare", che è esattamente il bug da correggere qui.
 function exitRilievoDiscard() {
   closeExitRilievoModal();
   stopGPS();
+  clearTimeout(_autosaveTimer);
+  if (activeRilievo) {
+    const idx = rilievi.findIndex(r => r.id === activeRilievo.id);
+    if (_rilievoSnapshotPrimaSessione) {
+      // Rilievo ripreso: ripristina esattamente come stava PRIMA di questa
+      // sessione, annullando ogni autosave avvenuto nel frattempo.
+      if (idx >= 0) rilievi[idx] = _rilievoSnapshotPrimaSessione;
+      else rilievi.push(_rilievoSnapshotPrimaSessione);
+    } else if (idx >= 0) {
+      // Rilievo nuovo di questa sessione: se l'autosave l'aveva già scritto
+      // nell'elenco, va rimosso del tutto — non deve comparire tra i rilievi.
+      rilievi.splice(idx, 1);
+    }
+    saveData();
+  }
   activeRilievo = null;
+  _rilievoSnapshotPrimaSessione = null;
+  renderHome();
   goBack();
 }
 
@@ -3750,6 +3771,7 @@ function confirmCompleteRilievo() {
   showToast(`Rilievo salvato: ${activeRilievo.plants.length} piante`);
   const rid = activeRilievo.id;
   activeRilievo = null;
+  _rilievoSnapshotPrimaSessione = null;
   renderHome(); goBack(); setTimeout(() => openRilievo(rid), 200);
 }
 
@@ -4043,8 +4065,9 @@ function showMapInfo(p, rilId) {
 function showRilievoMap() {
   const sel = document.getElementById('map-rilievo-sel');
   sel.value = currentRilievodId;
+  if (sel._syncFace) sel._syncFace(); // aggiorna anche la "faccia" della select personalizzata
   navTo('page-maps');
-  renderMap();
+  onMapRilievoChange(); // ricostruisce chip categorie + legenda in base al rilievo e renderizza la mappa
 }
 
 /* ═══════════════════ STATISTICHE ═══════════════════ */
@@ -5064,24 +5087,11 @@ const PROTO_ICONS = {
   gear: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#57534E" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>'
 };
 
-const BUILTIN_PROTOCOLS = [
-  {
-    id: 'standard',
-    name: 'Mappatura standard',
-    icon: PROTO_ICONS.grape,
-    category: 'Generale',
-    iconBg: '#e4f0ea',
-    desc: 'Rilievo fitosanitario generale: valutazione dello stato della pianta.',
-    classes: [
-      { id:'sana',      name:'Sana',          color:'#22C55E', abbr:'S'  },
-      { id:'scartare',  name:'Da scartare',   color:'#EF4444', abbr:'SC' },
-      { id:'rivedere',  name:'Da rivedere',   color:'#A855F7', abbr:'R'  },
-      { id:'altra',     name:'Altra varietà', color:'#F59E0B', abbr:'AV' },
-      { id:'rimpiazzo', name:'Rimpiazzo',     color:'#3B82F6', abbr:'RM' },
-      { id:'morta',     name:'Morta',         color:'#374151', abbr:'M'  },
-    ]
-  },
-];
+// Protocolli predefiniti: eliminati (vedi richiesta) — l'app parte senza
+// alcun protocollo pronto all'uso. Un utente che inizia da capo deve prima
+// crearsi un protocollo personalizzato dalla schermata "Tipo di mappatura"
+// prima di poter avviare un rilievo (vedi guardia in openStartFilareModal).
+const BUILTIN_PROTOCOLS = [];
 
 // Protocolli utente salvati
 let customProtocols   = JSON.parse(localStorage.getItem('vt_custom_protocols')  || '[]');
@@ -5090,8 +5100,10 @@ let customProtocols   = JSON.parse(localStorage.getItem('vt_custom_protocols')  
 customProtocols.forEach(p => { if (p.category === 'Personalizzati') p.icon = ''; });
 let deletedBuiltinIds = JSON.parse(localStorage.getItem('vt_deleted_builtins') || '[]');
 
-// Protocollo attivo per il rilievo corrente
-let activeProtocol = BUILTIN_PROTOCOLS[0]; // default: standard
+// Protocollo attivo per il rilievo corrente (nessun predefinito: se l'utente
+// ha già dei protocolli personalizzati salvati riparte dal primo di questi,
+// altrimenti resta null finché non ne crea uno).
+let activeProtocol = customProtocols[0] || null;
 
 function saveCustomProtocols() {
   localStorage.setItem('vt_custom_protocols',  JSON.stringify(customProtocols));
@@ -5149,7 +5161,11 @@ function renderProtocolList() {
     });
   });
 
-  if (!html) html = '<div style="text-align:center;padding:32px;color:var(--text-soft)">Nessun protocollo trovato</div>';
+  if (!html) {
+    html = (customProtocols.length === 0 && !q)
+      ? '<div style="text-align:center;padding:32px;color:var(--text-soft)">Nessun protocollo ancora — creane uno per iniziare a rilevare</div>'
+      : '<div style="text-align:center;padding:32px;color:var(--text-soft)">Nessun protocollo trovato</div>';
+  }
 
   // Pulsante ripristino predefiniti eliminati
   const ripristinaBtn = deletedBuiltinIds.length > 0
