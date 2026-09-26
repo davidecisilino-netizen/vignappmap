@@ -1427,7 +1427,7 @@ body.rilievo-fullscreen #bottom-nav { display: none; }
         <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a9 9 0 0 1 9 9c0 4.17-2.84 7.67-6.75 8.68L12 22l-2.25-2.32C5.84 18.67 3 15.17 3 11a9 9 0 0 1 9-9z"/><circle cx="12" cy="11" r="3"/></svg>
       </div>
       <div>
-        <div class="home-hero-title">VignApp Map <span style="font-size:11px; font-weight:600; opacity:.65; vertical-align:middle;">v. 33</span></div>
+        <div class="home-hero-title">VignApp Map <span style="font-size:11px; font-weight:600; opacity:.65; vertical-align:middle;">v. 34</span></div>
         <div class="home-hero-sub">App per rilievi puntuali pianta/pianta</div>
         <div id="home-date-str" style="font-size:11px;opacity:.55;margin-top:4px;text-transform:capitalize;letter-spacing:.2px;"></div>
       </div>
@@ -2664,7 +2664,13 @@ function saveAzienda() {
 
 function deleteAzienda() {
   if (!editingAziendaId) return;
-  const linked = vineyards.filter(v => v.aziendaId === editingAziendaId).length;
+  const linkedVineyards = vineyards.filter(v => v.aziendaId === editingAziendaId);
+  const linkedRilievi = rilievi.filter(r => linkedVineyards.some(v => v.id === r.vineyardId));
+  if (linkedRilievi.length > 0) {
+    alert(`Non è possibile eliminare l'azienda: ci sono ${linkedRilievi.length} rilievo/i associato/i ai suoi vigneti. Elimina prima i rilievi (e i vigneti, se necessario), poi l'azienda.`);
+    return;
+  }
+  const linked = linkedVineyards.length;
   if (linked > 0 && !confirm(`${linked} vigneto/i sono collegati a questa azienda. Il nome resterà sui vigneti, ma il collegamento all'anagrafica andrà perso. Continuare?`)) return;
   if (linked === 0 && !confirm('Eliminare questa azienda?')) return;
   vineyards.forEach(v => { if (v.aziendaId === editingAziendaId) v.aziendaId = null; });
@@ -2880,9 +2886,13 @@ function openVineyard(id) {
 }
 
 function deleteCurrentVineyard() {
-  if (!confirm(`Eliminare il vigneto? Verranno eliminati anche tutti i rilievi.`)) return;
+  const linked = rilievi.filter(r => r.vineyardId === currentVineyardId);
+  if (linked.length > 0) {
+    alert(`Non è possibile eliminare il vigneto: ci sono ${linked.length} rilievo/i associato/i. Elimina prima i rilievi, poi il vigneto.`);
+    return;
+  }
+  if (!confirm('Eliminare il vigneto?')) return;
   vineyards = vineyards.filter(v => v.id !== currentVineyardId);
-  rilievi   = rilievi.filter(r => r.vineyardId !== currentVineyardId);
   saveData();
   showToast('Vigneto eliminato');
   goBack();
