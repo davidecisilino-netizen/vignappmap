@@ -171,6 +171,7 @@ body {
   color: #fff;
   padding: 18px 16px 20px;
   border-bottom: 3px solid #4ca17b;
+  flex-shrink: 0;
 }
 .home-hero-inner {
   display: flex;
@@ -204,8 +205,8 @@ body {
 
 .stats-strip {
   display: flex;
-  gap: 10px;
-  padding: 14px 16px;
+  gap: 8px;
+  padding: 10px 16px;
   margin-top: 0;
   border-bottom: 1px solid var(--border);
 }
@@ -213,28 +214,50 @@ body {
   flex: 1;
   background: var(--surface);
   border-radius: var(--radius);
-  padding: 12px 8px;
+  padding: 7px 6px;
   text-align: center;
   box-shadow: var(--shadow);
   border: 1px solid var(--border);
   border-top: 3px solid var(--vine);
 }
 .stat-pill .val {
-  font-size: 22px;
+  font-size: 17px;
   font-weight: 700;
   font-family: var(--font-serif);
   color: var(--vine);
   line-height: 1;
 }
 .stat-pill .lbl {
-  font-size: 10px;
+  font-size: 9px;
   color: var(--text-soft);
-  margin-top: 4px;
+  margin-top: 2px;
   text-transform: uppercase;
   letter-spacing: .7px;
   font-weight: 600;
 }
 
+#page-home.active {
+  display: flex;
+  flex-direction: column;
+  height: calc(100dvh - 56px);
+  margin-bottom: calc(-68px - env(safe-area-inset-bottom, 0px));
+  overflow: hidden;
+}
+.home-recent-section {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.home-recent-section .section-label { flex-shrink: 0; }
+#home-recent {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+  -webkit-overflow-scrolling: touch;
+}
 .section-label {
   padding: 8px 16px 6px;
   font-size: 11px;
@@ -968,20 +991,23 @@ body.rilievo-fullscreen #bottom-nav { display: none; }
 .rilievo-detail-header {
   background: linear-gradient(145deg, var(--vine) 0%, var(--vine-mid) 100%);
   color: #fff;
-  padding: 20px 16px;
+  padding: 14px 16px;
 }
-.rdh-name { font-family: var(--font-serif); font-size: 19px; font-weight: 700; }
-.rdh-date { font-size: 12px; opacity: .75; margin-top: 3px; }
-.rdh-stats { display: flex; gap: 10px; margin-top: 14px; }
-.rdh-stat {
-  background: rgba(255,255,255,.18);
-  border-radius: 8px;
-  padding: 8px 12px;
-  text-align: center;
-  flex: 1;
-}
-.rdh-num { font-size: 20px; font-weight: 800; font-family: var(--font-serif); }
-.rdh-lbl { font-size: 10px; opacity: .8; margin-top: 2px; }
+.rdh-name { font-family: var(--font-serif); font-size: 17px; font-weight: 700; }
+.rdh-proto { font-size: 11px; font-weight: 600; opacity: .85; margin-top: 1px; }
+.rdh-date { font-size: 11px; opacity: .75; margin-top: 2px; }
+.rdh-headline { display: flex; gap: 20px; margin-top: 10px; }
+.rdh-num-lg { font-size: 21px; font-weight: 800; font-family: var(--font-serif); line-height: 1; }
+.rdh-headline .rdh-lbl { font-size: 10px; opacity: .75; margin-top: 2px; text-transform: uppercase; letter-spacing: .5px; }
+.rdh-inline-stat { display: flex; align-items: baseline; gap: 6px; margin-top: 8px; }
+.rdh-inline-stat .rdh-num-lg { font-size: 18px; }
+.rdh-inline-stat .rdh-lbl-inline { font-size: 12px; opacity: .8; }
+.rdh-class-bar { display: flex; height: 6px; border-radius: 99px; overflow: hidden; background: rgba(255,255,255,.18); margin-top: 10px; }
+.rdh-class-seg { height: 100%; }
+.rdh-class-legend { display: flex; flex-wrap: wrap; gap: 3px 12px; margin-top: 6px; }
+.rdh-legend-item { font-size: 11px; opacity: .92; display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+.rdh-legend-item b { font-weight: 800; }
+.rdh-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
 
 /* Plant grid in detail */
 .plant-grid {
@@ -1071,6 +1097,26 @@ body.rilievo-fullscreen #bottom-nav { display: none; }
 .mig-item span { font-size: 14px; font-weight: 600; }
 .modal-actions { display: flex; gap: 10px; }
 .modal-actions button { flex: 1; padding: 13px; }
+.modal-box {
+  background: var(--surface);
+  border-radius: 16px;
+  width: 100%;
+  padding: 16px;
+  margin-bottom: 24px;
+  box-shadow: 0 12px 32px rgba(0,0,0,.25);
+  animation: slideUp .2s ease-out;
+}
+.modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
+.modal-header .modal-title { margin-bottom: 0; }
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 20px;
+  line-height: 1;
+  color: var(--text-soft);
+  cursor: pointer;
+  padding: 4px 8px;
+}
 
 /* ── Stepper "da quale filare inizi" ── */
 .sf-stepper { display: flex; align-items: center; justify-content: center; gap: 14px; margin: 4px 0 14px; }
@@ -1185,10 +1231,18 @@ body.rilievo-fullscreen #bottom-nav { display: none; }
 .ril-date{font-family:var(--font-mono);font-size:12px;color:var(--text-soft);margin-top:2px}
 .ril-meta{font-size:12px;color:var(--text-mid);margin-top:4px}
 .ril-right{padding:12px 12px 12px 0;display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0}
-.ril-footer{padding:8px 14px 10px 19px;border-top:1px solid var(--surface2);display:flex;gap:6px;flex-wrap:wrap;align-items:center}
-.ril-mini-bar{flex:1;height:6px;background:var(--surface2);border-radius:99px;overflow:hidden;min-width:60px}
-.ril-mini-fill{height:100%;background:var(--sana);border-radius:99px}
-.ril-pct{font-size:11px;font-weight:700;color:var(--text-mid);flex-shrink:0}
+.ril-footer{padding:10px 14px 12px 19px;border-top:1px solid var(--surface2);display:flex;flex-direction:column;gap:8px}
+.ril-class-bar{display:flex;height:8px;border-radius:99px;overflow:hidden;background:var(--surface2)}
+.ril-class-seg{height:100%}
+.ril-class-summary{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:11px;color:var(--text-mid)}
+.ril-tot-count{font-weight:700;color:var(--text)}
+.ril-smp-flag{display:inline-flex;align-items:center;gap:3px;color:#0D7680;font-weight:700;white-space:nowrap}
+.ril-actions{display:flex;gap:6px;justify-content:flex-end}
+.ril-action-btn{display:inline-flex;align-items:center;gap:4px;padding:6px 12px;border-radius:20px;font-size:11px;font-weight:700;border:none;cursor:pointer;transition:transform .1s;font-family:inherit}
+.ril-action-btn:active{transform:scale(.93)}
+.ril-action-btn.edit{background:#E6F0EA;color:var(--vine)}
+.ril-action-btn.del{background:#FDEAEA;color:#B91C1C}
+.ril-action-btn.close{background:var(--surface2);color:var(--text-mid)}
 .vig-filter{display:flex;gap:8px;padding:8px 16px;overflow-x:auto;scrollbar-width:none;flex-wrap:nowrap}
 .vig-filter::-webkit-scrollbar{display:none}
 .vig-chip{flex-shrink:0;padding:6px 13px;border-radius:20px;font-size:12px;font-weight:600;border:1.5px solid var(--border);background:var(--surface);color:var(--text-mid);cursor:pointer;white-space:nowrap}
@@ -1373,16 +1427,16 @@ body.rilievo-fullscreen #bottom-nav { display: none; }
         <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a9 9 0 0 1 9 9c0 4.17-2.84 7.67-6.75 8.68L12 22l-2.25-2.32C5.84 18.67 3 15.17 3 11a9 9 0 0 1 9-9z"/><circle cx="12" cy="11" r="3"/></svg>
       </div>
       <div>
-        <div class="home-hero-title">VignApp Map <span style="font-size:11px; font-weight:600; opacity:.65; vertical-align:middle;">v. 20</span></div>
+        <div class="home-hero-title">VignApp Map <span style="font-size:11px; font-weight:600; opacity:.65; vertical-align:middle;">v. 33</span></div>
         <div class="home-hero-sub">App per rilievi puntuali pianta/pianta</div>
         <div id="home-date-str" style="font-size:11px;opacity:.55;margin-top:4px;text-transform:capitalize;letter-spacing:.2px;"></div>
       </div>
     </div>
   </div>
   <div class="stats-strip" id="home-stats">
+    <div class="stat-pill"><div class="val" id="hs-aziende">0</div><div class="lbl">Aziende</div></div>
     <div class="stat-pill"><div class="val" id="hs-vigneti">0</div><div class="lbl">Vigneti</div></div>
     <div class="stat-pill"><div class="val" id="hs-rilievi">0</div><div class="lbl">Rilievi</div></div>
-    <div class="stat-pill"><div class="val" id="hs-piante">0</div><div class="lbl">Piante</div></div>
   </div>
   <div class="section-label">Azioni rapide</div>
   <div class="quick-grid">
@@ -1423,9 +1477,10 @@ body.rilievo-fullscreen #bottom-nav { display: none; }
       <div><div class="lbl">Protocolli</div><div class="sub" id="hs-proto-sub">Gestisci mappature</div></div>
     </div>
   </div>
-  <div class="section-label" style="margin-top:8px;">Rilievi recenti</div>
-  <div class="recent-list" id="home-recent"></div>
-  <div style="height:8px;"></div>
+  <div class="home-recent-section">
+    <div class="section-label" style="margin-top:8px;">Rilievi recenti</div>
+    <div class="recent-list" id="home-recent"></div>
+  </div>
 </div>
 
 <!-- ══ VIGNETI ══ -->
@@ -1443,7 +1498,11 @@ body.rilievo-fullscreen #bottom-nav { display: none; }
       </button>
     </div>
   </div>
-  <div class="vig-filter" id="vy-azienda-filter"></div>
+  <div class="riliev-sel" style="padding-top:0">
+    <select id="vy-azienda-filter" onchange="renderVineyards()">
+      <option value="">Tutte le aziende</option>
+    </select>
+  </div>
   <div class="vineyard-cards" id="vineyard-list"></div>
 </div>
 
@@ -1456,8 +1515,8 @@ body.rilievo-fullscreen #bottom-nav { display: none; }
       Nuova
     </button>
   </div>
-  <div class="form-wrap" style="padding-bottom:0">
-    <input type="text" id="az-search" placeholder="Cerca azienda…" oninput="renderAziende()" style="margin-bottom:0">
+  <div class="search-wrap">
+    <input type="text" id="az-search" placeholder="Cerca azienda…" oninput="renderAziende()">
   </div>
   <div class="vineyard-cards" id="azienda-list"></div>
 </div>
@@ -1591,8 +1650,8 @@ body.rilievo-fullscreen #bottom-nav { display: none; }
   <div class="rilievo-detail-header" id="vd-header">
     <div class="rdh-name" id="vd-name">—</div>
     <div class="rdh-date" id="vd-sub">—</div>
-    <div class="rdh-stats">
-      <div class="rdh-stat"><div class="rdh-num" id="vd-nrilievi">—</div><div class="rdh-lbl">Rilievi</div></div>
+    <div class="rdh-inline-stat">
+      <span class="rdh-num-lg" id="vd-nrilievi">—</span><span class="rdh-lbl-inline">rilievi</span>
     </div>
   </div>
   <div style="padding:16px; display:flex; gap:10px;">
@@ -1739,12 +1798,11 @@ body.rilievo-fullscreen #bottom-nav { display: none; }
 <div class="page" id="page-rilievo-detail">
   <div class="rilievo-detail-header">
     <div class="rdh-name" id="rd-name">—</div>
+    <div class="rdh-proto" id="rd-proto" style="display:none;"></div>
     <div class="rdh-date" id="rd-date">—</div>
-    <div class="rdh-stats">
-      <div class="rdh-stat"><div class="rdh-num" id="rd-tot">—</div><div class="rdh-lbl">Piante</div></div>
-      <div class="rdh-stat"><div class="rdh-num" id="rd-sane">—</div><div class="rdh-lbl">Sane</div></div>
-      <div class="rdh-stat"><div class="rdh-num" id="rd-problemi">—</div><div class="rdh-lbl">Problemi</div></div>
-    </div>
+    <div class="rdh-headline" id="rd-headline"></div>
+    <div class="rdh-class-bar" id="rd-class-bar"></div>
+    <div class="rdh-class-legend" id="rd-class-legend"></div>
   </div>
   <div style="padding:12px 16px 0;">
     <button class="btn-complete" id="rd-resume-btn" style="display:none;width:100%;margin:0 0 10px;" onclick="resumeRilievo(currentRilievodId)">
@@ -1951,22 +2009,20 @@ body.rilievo-fullscreen #bottom-nav { display: none; }
       <label>Parte della pianta *</label>
       <select id="cf-parte">
         <option value="">— seleziona —</option>
-        <optgroup label="Organi verdi">
-          <option>Foglia</option>
-          <option>Germoglio apicale</option><option>Tralcio verde</option>
-        </optgroup>
-        <optgroup label="Legno">
-          <option>Tralcio legnoso</option><option>Sarmento</option>
-          <option>Branca</option><option>Tronco (corteccia)</option><option>Radice</option>
-        </optgroup>
-        <optgroup label="Frutto">
-          <option>Acino (polpa)</option><option>Acino (buccia)</option>
-          <option>Raspo</option><option>Grappolo intero</option>
-        </optgroup>
-        <optgroup label="Altro">
-          <option>Insetto / vettore</option><option>Suolo rizosfera</option>
-          <option>Altro (vedi note)</option>
-        </optgroup>
+        <option>Foglia</option>
+        <option>Germoglio</option>
+        <option>Tralcio verde</option>
+        <option>Tralcio legnoso</option>
+        <option>Legno</option>
+        <option>Corteccia</option>
+        <option>Radice</option>
+        <option>Acino</option>
+        <option>Raspo</option>
+        <option>Grappolo</option>
+        <option>Insetti</option>
+        <option>Acari</option>
+        <option>Suolo</option>
+        <option>Altro (vedi note)</option>
       </select>
     </div>
     <div class="form-group">
@@ -1975,9 +2031,8 @@ body.rilievo-fullscreen #bottom-nav { display: none; }
         <option value="">— seleziona —</option>
         <optgroup label="Analisi molecolari">
           <option value="Genetica">Identificazione varietale</option>
-          <option value="Virologia">Virologia (PCR / RT-PCR)</option>
-          <option value="Fitopatologia">Fitopatologia molecolare</option>
-          <option value="Fitopatologia">Fitoplasmi (PCR)</option>
+          <option value="Virologia">Virus</option>
+          <option value="Fitopatologia">Fitoplasmi</option>
         </optgroup>
         <optgroup label="Analisi biologiche">
           <option value="Fitopatologia">Fitopatologia (isolamento patogeno)</option>
@@ -2033,20 +2088,13 @@ body.rilievo-fullscreen #bottom-nav { display: none; }
       <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Nuovo
     </button>
   </div>
-  <div class="vig-filter" id="rl-vig-filter">
-    <div class="vig-chip active" onclick="setRilVigFilter(this,'all')">Tutti i vigneti</div>
+  <div class="riliev-sel" style="padding-top:8px;padding-bottom:0">
+    <select id="rl-vig-filter" onchange="renderRilieviList()">
+      <option value="all">Tutti i vigneti</option>
+    </select>
   </div>
   <div class="search-wrap" style="padding-top:4px">
     <input type="text" id="rl-search" placeholder="Cerca data, vigneto, operatore..." oninput="renderRilieviList()">
-  </div>
-  <div style="padding:4px 16px 8px;display:flex;gap:8px;align-items:center">
-    <span style="font-size:12px;color:var(--text-soft)">Ordina:</span>
-    <select id="rl-sort" onchange="renderRilieviList()" style="border:1.5px solid var(--border);border-radius:8px;padding:4px 26px 4px 10px;font-size:12px;background:var(--surface) url('data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2724%27 height=%2724%27 viewBox=%270 0 24 24%27 fill=%27none%27 stroke=%27%238A8478%27 stroke-width=%272.2%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27%3E%3Cpolyline points=%276 9 12 15 18 9%27/%3E%3C/svg%3E') no-repeat right 7px center/12px;outline:none;-webkit-appearance:none">
-      <option value="date-desc">Piu recente</option>
-      <option value="date-asc">Piu vecchio</option>
-      <option value="piante-desc">Piu piante</option>
-      <option value="sane-desc">% sane</option>
-    </select>
   </div>
   <div style="padding:0 16px" id="rilievi-list-container"></div>
   <div style="height:8px"></div>
@@ -2138,7 +2186,7 @@ body.rilievo-fullscreen #bottom-nav { display: none; }
   <button class="nav-btn active" onclick="navTo('page-home',this)"><svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Home</button>
   <button class="nav-btn" onclick="navTo('page-vineyards',this)"><svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="4" ry="3"/><path d="M5 12c0-3.5 3-6 7-6s7 2.5 7 6v7a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1z"/></svg>Vigneti</button>
   <button class="nav-btn fab-new" onclick="startNewRilievo()"><svg fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Nuovo</button>
-  <button class="nav-btn ril-btn" onclick="navRilievi(this)"><svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2V9M9 21H5a2 2 0 0 1-2-2V9m0 0h18"/></svg>Rilievi</button>
+  <button class="nav-btn" onclick="navRilievi(this)"><svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2V9M9 21H5a2 2 0 0 1-2-2V9m0 0h18"/></svg>Rilievi</button>
   <button class="nav-btn" onclick="navTo('page-campioni',this)"><svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M2 15c6.667-6 13.333 0 20-6"/><path d="M9 22c1.8-2 2.5-4 2.8-6"/><path d="M15 2c-1.8 2-2.5 4-2.8 6"/><path d="m17 6-2.5-2.5"/><path d="m14 8-1-1"/><path d="m7 18 2.5 2.5"/><path d="m10 16 1 1"/></svg>Campioni</button>
   <button class="nav-btn" onclick="navTo('page-sync',this)"><svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10"/><polyline points="23 20 23 14 17 14"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4-4.64 4.36A9 9 0 0 1 3.51 15"/></svg>Sync</button>
 </nav>
@@ -2318,7 +2366,8 @@ const UI_ICONS = {
   pin: '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a7 7 0 0 1 7 7c0 5-7 13-7 13S5 14 5 9a7 7 0 0 1 7-7z"/><circle cx="12" cy="9" r="2.3"/></svg>',
   trash: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>',
   lock: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="4.5" y="10.5" width="15" height="10" rx="2"/><path d="M8 10.5V7a4 4 0 0 1 8 0v3.5"/></svg>',
-  flask: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 2h6"/><path d="M10 2v6.3L4.6 18a2 2 0 0 0 1.8 3h11.2a2 2 0 0 0 1.8-3L14 8.3V2"/><path d="M7.3 14.5h9.4"/></svg>'
+  flask: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 2h6"/><path d="M10 2v6.3L4.6 18a2 2 0 0 0 1.8 3h11.2a2 2 0 0 0 1.8-3L14 8.3V2"/><path d="M7.3 14.5h9.4"/></svg>',
+  edit: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>'
 };
 
 /* ═══════════════════ CAMPIONI ↔ PIANTE (link) ═══════════════════ */
@@ -2364,12 +2413,13 @@ function enhanceSelect(id, faceClass, opts) {
 
 function enhanceAllSelects() {
   enhanceSelect('map-rilievo-sel',   'sel-face-mid', { flex: true });
+  enhanceSelect('vy-azienda-filter', 'sel-face-mid', { flex: true });
   enhanceSelect('nv-azienda-sel',    'sel-face-form');
   enhanceSelect('stats-sel',       'sel-face-mid');
   enhanceSelect('cf-rilievo',      'sel-face-form');
   enhanceSelect('cf-parte',        'sel-face-form');
   enhanceSelect('cf-tipo',         'sel-face-form');
-  enhanceSelect('rl-sort',         'sel-face-compact', { inline: true });
+  enhanceSelect('rl-vig-filter',   'sel-face-mid', { flex: true });
   enhanceSelect('rie-stato',       'sel-face-mid');
 }
 
@@ -2732,10 +2782,9 @@ function goBack() {
 
 /* ═══════════════════ HOME ═══════════════════ */
 function renderHome() {
+  document.getElementById('hs-aziende').textContent = (typeof aziende !== 'undefined') ? aziende.length : 0;
   document.getElementById('hs-vigneti').textContent = vineyards.length;
   document.getElementById('hs-rilievi').textContent = rilievi.length;
-  const tot = rilievi.reduce((s,r) => s + r.plants.length, 0);
-  document.getElementById('hs-piante').textContent = tot;
   var hsr=document.getElementById('hs-r-sub');if(hsr)hsr.textContent=rilievi.length+' rilievi';
   var hsc2=document.getElementById('hs-c-sub');if(hsc2&&typeof campioni!=='undefined')hsc2.textContent=campioni.length+' campioni';
   var hsp=document.getElementById('hs-proto-sub');if(hsp){const np=customProtocols.length+Math.max(0,BUILTIN_PROTOCOLS.length-deletedBuiltinIds.length);hsp.textContent=np+' protocolli disponibili';}
@@ -2744,7 +2793,7 @@ function renderHome() {
     recent.innerHTML = '<div class="empty"><p>Nessun rilievo ancora</p></div>';
     return;
   }
-  const sorted = [...rilievi].sort((a,b) => b.date.localeCompare(a.date)).slice(0, 3);
+  const sorted = [...rilievi].sort((a,b) => b.date.localeCompare(a.date)).slice(0, 5);
   recent.innerHTML = sorted.map(r => {
     const sane = r.plants.filter(p => p.classificazione === 'Sana').length;
     const pct = r.plants.length ? Math.round(sane/r.plants.length*100) : 0;
@@ -2759,31 +2808,21 @@ function renderHome() {
 }
 
 /* ═══════════════════ VIGNETI ═══════════════════ */
-let vyAziendaFilter = ''; // '' = tutte le aziende
-function setVyAziendaFilter(el) {
-  vyAziendaFilter = (el && el.dataset.azienda) || '';
-  renderVineyards();
-}
-
 function renderVineyards() {
   const list = document.getElementById('vineyard-list');
 
-  // Filtro aziende come chip orizzontali — stesso stile del filtro vigneto
-  // nella lista Rilievi (.vig-filter/.vig-chip), non più un menu a tendina.
-  // Solo aziende realmente presenti, in ordine alfabetico.
-  const ff = document.getElementById('vy-azienda-filter');
-  const aziendeNomi = [...new Set(vineyards.map(v => v.azienda).filter(Boolean))].sort((a,b) => a.localeCompare(b, 'it', {sensitivity:'base'}));
-  if (!aziendeNomi.includes(vyAziendaFilter)) vyAziendaFilter = '';
-  if (ff) {
-    ff.style.display = aziendeNomi.length > 1 ? '' : 'none';
-    ff.innerHTML = '<div class="vig-chip ' + (vyAziendaFilter === '' ? 'active' : '') + '" data-azienda="" onclick="setVyAziendaFilter(this)">Tutte le aziende</div>' +
-      aziendeNomi.map(a => {
-        const active = vyAziendaFilter === a ? 'active' : '';
-        return '<div class="vig-chip ' + active + '" data-azienda="' + esc(a) + '" onclick="setVyAziendaFilter(this)">' + esc(a) + '</div>';
-      }).join('');
-  }
+  // Popola il filtro aziende (solo aziende realmente presenti, in ordine alfabetico)
+  const filterSel = document.getElementById('vy-azienda-filter');
+  const aziende = [...new Set(vineyards.map(v => v.azienda).filter(Boolean))].sort((a,b) => a.localeCompare(b, 'it', {sensitivity:'base'}));
+  const curFilter = filterSel.value;
+  filterSel.innerHTML = '<option value="">Tutte le aziende</option>' +
+    aziende.map(a => `<option value="${esc(a)}">${esc(a)}</option>`).join('');
+  if (aziende.includes(curFilter)) filterSel.value = curFilter;
+  if (filterSel._syncFace) filterSel._syncFace();
+  filterSel.parentElement.style.display = aziende.length > 1 ? '' : 'none';
 
-  const filtered = vyAziendaFilter ? vineyards.filter(v => v.azienda === vyAziendaFilter) : vineyards;
+  const selectedAzienda = filterSel.value;
+  const filtered = selectedAzienda ? vineyards.filter(v => v.azienda === selectedAzienda) : vineyards;
 
   if (vineyards.length === 0) {
     list.innerHTML = '<div class="empty"><svg width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><circle cx="12" cy="5" r="3"/><path d="M12 8C8 8 5 11 5 15L5 20L9 20L9 15C9 13 10 12 12 12C14 12 15 13 15 15L15 20L19 20L19 15C19 11 16 8 12 8Z"/></svg><p>Nessun vigneto ancora</p></div>';
@@ -2820,7 +2859,8 @@ function openVineyard(id) {
   const v = vineyards.find(x => x.id === id);
   if (!v) return;
   document.getElementById('vd-name').textContent = v.name;
-  document.getElementById('vd-sub').textContent = `${v.azienda ? v.azienda + ' — ' : ''}${v.varieta} · ${v.loc || ''}${(v.lat && v.lon) ? ' · ' + v.lat.toFixed(5) + ', ' + v.lon.toFixed(5) : ''}`;
+  const vdSubParts = [v.varieta, v.loc, (v.lat && v.lon) ? `${v.lat.toFixed(5)}, ${v.lon.toFixed(5)}` : null].filter(Boolean).join(' · ');
+  document.getElementById('vd-sub').textContent = v.azienda ? `${v.azienda} — ${vdSubParts}` : vdSubParts;
   const vr = rilievi.filter(r => r.vineyardId === id);
   document.getElementById('vd-nrilievi').textContent = vr.length;
   const list = document.getElementById('vd-rilievi-list');
@@ -3147,8 +3187,6 @@ function initRilievo(vineyardId, startFilare) {
   currentFilare = (Number.isFinite(n) && n >= 1) ? n : 1;
   currentPianta = 1;
   currentDir = 'from';
-  const _spi = document.getElementById('start-pos-input');
-  if (_spi) _spi.value = 1;
 
   // Bottoni classificazione dinamici
   renderClassifButtons();
@@ -3818,23 +3856,60 @@ function openRilievo(id) {
   const r = rilievi.find(x => x.id === id);
   if (!r) return;
 
-  // Protocol badge on title
+  // Titolo: nome vigneto, con il protocollo usato su una riga a parte subito
+  // sotto (prima era un badge accanto al nome, ma con nomi lunghi andava a
+  // capo rompendo il layout — su una riga propria c'è sempre spazio).
   const proto = r.protocollo;
-  const protoTag = proto && proto.id !== 'standard'
-    ? ` <span style="font-size:11px;font-weight:700;color:var(--vine-mid);background:var(--vine-pale);border-radius:99px;padding:2px 9px;vertical-align:middle">${proto.name}</span>`
-    : '';
-  document.getElementById('rd-name').innerHTML = r.vineyardName + protoTag;
+  document.getElementById('rd-name').textContent = r.vineyardName;
+  const protoEl = document.getElementById('rd-proto');
+  if (proto && proto.name) {
+    protoEl.textContent = proto.name;
+    protoEl.style.display = '';
+  } else {
+    protoEl.style.display = 'none';
+  }
   document.getElementById('rd-date').textContent = r.date;
-  document.getElementById('rd-tot').textContent = r.plants.length;
-
-  // Count "healthy" = first class of protocol (or 'Sana')
-  const firstClsName = proto ? proto.classes[0].name : 'Sana';
-  const sane = r.plants.filter(p => p.classificazione === firstClsName).length;
-  document.getElementById('rd-sane').textContent = sane;
-  document.getElementById('rd-problemi').textContent = r.plants.filter(p => p.classificazione !== firstClsName && p.classificazione !== 'Rimpiazzo').length;
 
   // Build color map from protocol
   const colorMap = _getColorMapForRilievo(r);
+
+  // Riepilogo: due numeri "in evidenza" (piante totali, filari osservati),
+  // poi una sottile barra segmentata con le proporzioni delle classificazioni
+  // e una legenda compatta (pallino colore + nome + conteggio) sotto — niente
+  // più tante card scatolate, più leggero da vedere e non cresce in altezza
+  // anche con protocolli con molte classi.
+  const tot = r.plants.length;
+  const nFilari = new Set(r.plants.map(p => p.filare)).size;
+  document.getElementById('rd-headline').innerHTML =
+    `<div><div class="rdh-num-lg">${tot}</div><div class="rdh-lbl">Piante</div></div>` +
+    `<div><div class="rdh-num-lg">${nFilari}</div><div class="rdh-lbl">Filari</div></div>`;
+
+  const counts = {};
+  r.plants.forEach(p => { counts[p.classificazione] = (counts[p.classificazione]||0) + 1; });
+  const classNomi = proto && proto.classes
+    ? proto.classes.map(c => c.name).filter(name => counts[name])
+    : Object.keys(counts);
+  // eventuali classificazioni non più presenti nel protocollo (es. protocollo
+  // modificato dopo il rilievo) restano comunque visibili in coda
+  Object.keys(counts).forEach(name => { if (!classNomi.includes(name)) classNomi.push(name); });
+
+  const barEl = document.getElementById('rd-class-bar');
+  const legendEl = document.getElementById('rd-class-legend');
+  if (tot === 0 || classNomi.length === 0) {
+    barEl.style.display = 'none';
+    legendEl.innerHTML = '';
+  } else {
+    barEl.style.display = '';
+    barEl.innerHTML = classNomi.map(name => {
+      const color = colorMap[name] || '#9CA3AF';
+      const pctSeg = (counts[name] / tot * 100);
+      return `<div class="rdh-class-seg" style="width:${pctSeg}%;background:${color}" title="${esc(name)}: ${counts[name]}"></div>`;
+    }).join('');
+    legendEl.innerHTML = classNomi.map(name => {
+      const color = colorMap[name] || '#9CA3AF';
+      return `<span class="rdh-legend-item"><span class="rdh-dot" style="background:${color}"></span>${esc(name)} <b>${counts[name]}</b></span>`;
+    }).join('');
+  }
 
   // Build plant grid grouped by filare
   const byFilare = {};
@@ -4210,7 +4285,6 @@ updateTopbarUser();
 
 
 /* ══════ RILIEVI LIST ══════ */
-let rilieviVigFilter = 'all';
 let plantEditMode = false;
 let editingPlant = null;
 
@@ -4227,33 +4301,35 @@ function navRilievi(btn) {
 }
 
 function renderRilieviList() {
+  // Filtro vigneto come tendina (non più chip: con molti vigneti una fila di
+  // chip diventa poco pratica da scorrere, un menu a tendina resta usabile
+  // qualunque sia il numero di vigneti).
   const ff = document.getElementById('rl-vig-filter');
+  let vigFilterVal = 'all';
   if (ff) {
+    const curFilter = ff.value;
     const vids = [...new Set(rilievi.map(r => r.vineyardId))];
-    ff.innerHTML = '<div class="vig-chip ' + (rilieviVigFilter === 'all' ? 'active' : '') + '" onclick="setRilVigFilter(this,\'all\')">Tutti</div>' +
-      vids.map(vid => {
-        const v = vineyards.find(x => x.id === vid);
-        const active = rilieviVigFilter === vid ? 'active' : '';
-        return '<div class="vig-chip ' + active + '" onclick="setRilVigFilter(this,\'' + vid + '\')">' + (v ? esc(v.name) : esc(vid)) + '</div>';
-      }).join('');
+    const vidsOrdinati = vids
+      .map(vid => ({ vid, name: (vineyards.find(x => x.id === vid) || {}).name || vid }))
+      .sort((a,b) => a.name.localeCompare(b.name, 'it', {sensitivity:'base'}));
+    ff.innerHTML = '<option value="all">Tutti i vigneti</option>' +
+      vidsOrdinati.map(({vid, name}) => `<option value="${esc(vid)}">${esc(name)}</option>`).join('');
+    if (vids.includes(curFilter)) ff.value = curFilter;
+    if (ff._syncFace) ff._syncFace();
+    vigFilterVal = ff.value;
   }
   const search = (document.getElementById('rl-search') || {value: ''}).value.toLowerCase();
-  const sort = (document.getElementById('rl-sort') || {value: 'date-desc'}).value;
   let filtered = rilievi.filter(r => {
-    const mf = rilieviVigFilter === 'all' || r.vineyardId === rilieviVigFilter;
+    const mf = vigFilterVal === 'all' || r.vineyardId === vigFilterVal;
     const ms = !search || (r.vineyardName||'').toLowerCase().includes(search) || (r.date||'').includes(search) || (r.operatore||'').toLowerCase().includes(search);
     return mf && ms;
   });
+  // Ordine fisso: più recente prima; a parità di data, in ordine alfabetico
+  // per vigneto (niente più menu "Ordina" — l'ordinamento è sempre questo).
   filtered.sort((a, b) => {
-    if (sort === 'date-desc') return b.date.localeCompare(a.date);
-    if (sort === 'date-asc') return a.date.localeCompare(b.date);
-    if (sort === 'piante-desc') return b.plants.length - a.plants.length;
-    if (sort === 'sane-desc') {
-      const pa = a.plants.length ? a.plants.filter(p => p.classificazione === 'Sana').length / a.plants.length : 0;
-      const pb = b.plants.length ? b.plants.filter(p => p.classificazione === 'Sana').length / b.plants.length : 0;
-      return pb - pa;
-    }
-    return 0;
+    const d = (b.date||'').localeCompare(a.date||'');
+    if (d !== 0) return d;
+    return (a.vineyardName||'').localeCompare(b.vineyardName||'', 'it', {sensitivity:'base'});
   });
   const container = document.getElementById('rilievi-list-container');
   if (!container) return;
@@ -4264,38 +4340,52 @@ function renderRilieviList() {
   const SC = {completato: '#22C55E', in_corso: '#F59E0B', parziale: '#3B82F6'};
   const SL = {completato: 'Completato', in_corso: 'In corso', parziale: 'Parziale'};
   container.innerHTML = filtered.map(r => {
-    const sane = r.plants.filter(p => p.classificazione === 'Sana').length;
     const tot = r.plants.length;
-    const pct = tot ? Math.round(sane / tot * 100) : 0;
-    const prob = r.plants.filter(p => !['Sana','Rimpiazzo'].includes(p.classificazione)).length;
     const sc = SC[r.status] || '#9CA3AF';
     const sl = SL[r.status] || r.status;
-    const nc = typeof campioni !== 'undefined' ? campioni.filter(c => c.rilievodId === r.id).length : 0;
+    const hasSamples = typeof campioni !== 'undefined' && campioni.some(c => c.rilievodId === r.id);
+
+    // Barra segmentata: una porzione per ogni classificazione presente, larga
+    // in proporzione al numero di piante, colorata secondo il protocollo usato
+    // per QUESTO rilievo (ogni rilievo può avere un protocollo/classi diverse,
+    // essendo i protocolli personalizzabili) — stessa mappa colori già usata
+    // per le mappe. Segmenti più numerosi prima.
+    const colorMap = _getColorMapForRilievo(r);
+    const counts = {};
+    r.plants.forEach(p => { counts[p.classificazione] = (counts[p.classificazione]||0) + 1; });
+    const segNomi = Object.keys(counts).sort((a,b) => counts[b] - counts[a]);
+    const bar = tot > 0
+      ? segNomi.map(name => {
+          const color = colorMap[name] || '#9CA3AF';
+          const pctSeg = (counts[name] / tot * 100);
+          return '<div class="ril-class-seg" style="width:' + pctSeg + '%;background:' + color + '" title="' + esc(name) + ': ' + counts[name] + '"></div>';
+        }).join('')
+      : '<div class="ril-class-seg" style="width:100%;background:var(--surface2)"></div>';
+
     return '<div class="ril-card" onclick="openRilievo(\'' + r.id + '\')">' +
       '<div class="ril-card-body">' +
-        '<div class="ril-strip"></div>' +
+        '<div class="ril-strip" style="background:' + sc + '"></div>' +
         '<div class="ril-inner">' +
           '<div class="ril-vineyard">' + esc(r.vineyardName) + '</div>' +
-          '<div class="ril-date">' + esc(r.date) + (r.operatore ? ' · ' + esc(r.operatore) : '') + '</div>' +
-          '<div class="ril-meta">' + tot + ' piante · ' + prob + ' probl.' + (nc ? ' · ' + nc + ' camp.' : '') + '</div>' +
+          '<div class="ril-date">' + esc(r.date) + '</div>' +
         '</div>' +
         '<div class="ril-right">' +
           '<span style="font-size:11px;font-weight:700;color:' + sc + '">' + sl + '</span>' +
         '</div>' +
       '</div>' +
       '<div class="ril-footer">' +
-        '<div class="ril-mini-bar"><div class="ril-mini-fill" style="width:' + pct + '%"></div></div>' +
-        '<span class="ril-pct">' + pct + '% sane</span>' +
-        '<button class="btn-edit" style="font-size:11px;padding:3px 10px" onclick="event.stopPropagation();editRilieviInfo(\'' + r.id + '\')">Modifica</button>' +
-        '<button class="btn-del" style="font-size:11px;padding:3px 10px" onclick="event.stopPropagation();deleteRilievo(\'' + r.id + '\')">Elimina</button>' +
+        '<div class="ril-class-bar">' + bar + '</div>' +
+        '<div class="ril-class-summary">' +
+          '<span class="ril-tot-count">' + tot + ' piante rilevate</span>' +
+          (hasSamples ? '<span class="ril-smp-flag">' + UI_ICONS.flask + ' Campioni prelevati</span>' : '') +
+        '</div>' +
+        '<div class="ril-actions">' +
+          '<button class="ril-action-btn edit" onclick="event.stopPropagation();editRilieviInfo(\'' + r.id + '\')">' + UI_ICONS.edit + ' Modifica</button>' +
+          '<button class="ril-action-btn del" onclick="event.stopPropagation();deleteRilievo(\'' + r.id + '\')">' + UI_ICONS.trash + ' Elimina</button>' +
+        '</div>' +
       '</div>' +
     '</div>';
   }).join('');
-}
-
-function setRilVigFilter(el, vid) {
-  rilieviVigFilter = vid;
-  renderRilieviList();
 }
 
 function editRilieviInfo(id) { currentRilievodId = id; openRilieviInfoEdit(); }
@@ -5167,17 +5257,7 @@ function renderProtocolList() {
       : '<div style="text-align:center;padding:32px;color:var(--text-soft)">Nessun protocollo trovato</div>';
   }
 
-  // Pulsante ripristino predefiniti eliminati
-  const ripristinaBtn = deletedBuiltinIds.length > 0
-    ? `<div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border)">
-        <button onclick="restoreBuiltinProtocols()" style="width:100%;padding:10px 12px;border:1.5px dashed var(--border);border-radius:10px;background:none;font:600 13px var(--font-ui);color:var(--vine);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px">
-          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.51"/></svg>
-          Ripristina ${deletedBuiltinIds.length} predefinito/i eliminato/i
-        </button>
-      </div>`
-    : '';
-
-  document.getElementById('protocol-list').innerHTML = html + ripristinaBtn;
+  document.getElementById('protocol-list').innerHTML = html;
 }
 
 function filterProtocols() { renderProtocolList(); }
@@ -5435,20 +5515,13 @@ function deleteCustomProtocol(id) {
   deleteProtocol(id);
 }
 
-/* Elimina qualsiasi protocollo: predefinito o personalizzato */
+/* Elimina un protocollo personalizzato (non esistono più protocolli predefiniti da poter ripristinare) */
 function deleteProtocol(id) {
-  const isBuiltin = !!BUILTIN_PROTOCOLS.find(p => p.id === id);
-  const isCustom  = !!customProtocols.find(p => p.id === id);
-  if (!isBuiltin && !isCustom) return;
-
-  const proto = isBuiltin
-    ? BUILTIN_PROTOCOLS.find(p => p.id === id)
-    : customProtocols.find(p => p.id === id);
+  const proto = customProtocols.find(p => p.id === id);
+  if (!proto) return;
 
   // Blocca l'eliminazione dell'ultimo protocollo rimasto
-  const visibleBuiltins = BUILTIN_PROTOCOLS.filter(p => !deletedBuiltinIds.includes(p.id));
-  const totalVisible = visibleBuiltins.length + customProtocols.length;
-  if (totalVisible <= 1) {
+  if (customProtocols.length <= 1) {
     showToast('Deve restare almeno un protocollo');
     return;
   }
@@ -5456,21 +5529,15 @@ function deleteProtocol(id) {
   // Messaggio di conferma con avviso se usato nei rilievi
   const usedIn = rilievi.filter(r => r.protocollo && r.protocollo.id === id);
   let msg = `Eliminare il protocollo "${proto.name}"?`;
-  if (isBuiltin) msg += '\n\nÈ un protocollo predefinito: potrai ripristinarlo in qualsiasi momento.';
   if (usedIn.length > 0) msg += `\n\nUsato in ${usedIn.length} rilievo/i: i dati non vengono persi.`;
   if (!confirm(msg)) return;
 
-  if (isBuiltin) {
-    deletedBuiltinIds.push(id);
-  } else {
-    customProtocols = customProtocols.filter(p => p.id !== id);
-  }
+  customProtocols = customProtocols.filter(p => p.id !== id);
 
-  // Se era il protocollo attivo, ripristina il primo disponibile
+  // Se era il protocollo attivo, attiva il primo disponibile rimasto
   if (activeProtocol && activeProtocol.id === id) {
-    const newVisible = BUILTIN_PROTOCOLS.filter(p => !deletedBuiltinIds.includes(p.id));
-    activeProtocol = newVisible[0] || customProtocols[0] || BUILTIN_PROTOCOLS[0];
-    showToast('Eliminato — attivato: ' + activeProtocol.name);
+    activeProtocol = customProtocols[0] || null;
+    showToast(activeProtocol ? 'Eliminato — attivato: ' + activeProtocol.name : 'Protocollo eliminato — creane uno nuovo per rilevare');
   } else {
     showToast('Protocollo eliminato');
   }
@@ -5478,16 +5545,6 @@ function deleteProtocol(id) {
   saveCustomProtocols();
   renderProtocolList();
   renderHome();
-}
-
-/* Ripristina tutti i predefiniti nascosti */
-function restoreBuiltinProtocols() {
-  const n = deletedBuiltinIds.length;
-  deletedBuiltinIds = [];
-  saveCustomProtocols();
-  renderProtocolList();
-  renderHome();
-  showToast(`${n} protocollo/i predefinito/i ripristinato/i`);
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -5865,10 +5922,10 @@ function syncClearAll() {
       <div id="sdm-piante" style="display:flex;flex-wrap:wrap;gap:5px"></div>
     </div>
     <div style="font-size:13px;color:var(--text-soft);margin-bottom:16px" id="sdm-note"></div>
-    <div class="modal-actions">
-      <button class="btn-secondary" onclick="closeSmpModal()">Chiudi</button>
-      <button class="btn-edit" onclick="editCampioneFromModal()">Modifica</button>
-      <button class="btn-del" onclick="deleteCampioneFromModal()">Elimina</button>
+    <div class="ril-actions" style="margin-top:2px">
+      <button class="ril-action-btn close" onclick="closeSmpModal()">Chiudi</button>
+      <button class="ril-action-btn edit" onclick="editCampioneFromModal()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg> Modifica</button>
+      <button class="ril-action-btn del" onclick="deleteCampioneFromModal()"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg> Elimina</button>
     </div>
   </div>
 </div>
