@@ -2,9 +2,9 @@
 // Scopo: 1) rendere l'app installabile (PWA) 2) farla funzionare anche senza rete in vigna,
 // dato che i dati veri restano su localStorage/IndexedDB nel browser, non qui.
 
-const CACHE_NAME = 'vignaapp-v32';
+const CACHE_NAME = 'vignaapp-v34';
 const APP_SHELL = [
-  './VignApp_Map_v5_34.html',
+  './VignApp_Map_v5_36.html',
   './manifest.json',
   './icon-192.png',
   './icon-512.png'
@@ -30,7 +30,7 @@ self.addEventListener('activate', event => {
 // cache-first per tutto il resto (font, icone) cosi' funziona offline in campo.
 self.addEventListener('fetch', event => {
   const req = event.request;
-  const isAppHtml = req.mode === 'navigate' || req.url.endsWith('VignApp_Map_v5_34.html');
+  const isAppHtml = req.mode === 'navigate' || req.url.endsWith('VignApp_Map_v5_36.html');
 
   if (isAppHtml) {
     event.respondWith(
@@ -39,7 +39,7 @@ self.addEventListener('fetch', event => {
           caches.open(CACHE_NAME).then(cache => cache.put(req, res.clone()));
           return res;
         })
-        .catch(() => caches.match(req).then(cached => cached || caches.match('./VignApp_Map_v5_34.html')))
+        .catch(() => caches.match(req).then(cached => cached || caches.match('./VignApp_Map_v5_36.html')))
     );
     return;
   }
