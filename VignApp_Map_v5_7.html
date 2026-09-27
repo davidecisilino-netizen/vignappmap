@@ -474,6 +474,9 @@ select {
 .form-row .form-group { flex: 1; }
 .form-actions { display: flex; gap: 10px; margin-top: 8px; }
 .form-actions button { flex: 1; padding: 14px; font-size: 15px; }
+.btn-modal-close { background: var(--surface2); color: var(--text-mid); border: 1.5px solid var(--border); border-radius: 12px; font-weight: 700; cursor: pointer; }
+.btn-modal-edit { background: var(--surface2); color: var(--vine); border: 1.5px solid var(--vine-light); border-radius: 12px; font-weight: 700; cursor: pointer; }
+.btn-modal-del { background: #FEE2E2; color: #B91C1C; border: 1.5px solid #FCA5A5; border-radius: 12px; font-weight: 700; cursor: pointer; }
 .btn-primary-lg {
   background: var(--vine);
   color: #fff;
@@ -1237,12 +1240,6 @@ body.rilievo-fullscreen #bottom-nav { display: none; }
 .ril-class-summary{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:11px;color:var(--text-mid)}
 .ril-tot-count{font-weight:700;color:var(--text)}
 .ril-smp-flag{display:inline-flex;align-items:center;gap:3px;color:#0D7680;font-weight:700;white-space:nowrap}
-.ril-actions{display:flex;gap:6px;justify-content:flex-end}
-.ril-action-btn{display:inline-flex;align-items:center;gap:4px;padding:6px 12px;border-radius:20px;font-size:11px;font-weight:700;border:none;cursor:pointer;transition:transform .1s;font-family:inherit}
-.ril-action-btn:active{transform:scale(.93)}
-.ril-action-btn.edit{background:#E6F0EA;color:var(--vine)}
-.ril-action-btn.del{background:#FDEAEA;color:#B91C1C}
-.ril-action-btn.close{background:var(--surface2);color:var(--text-mid)}
 .vig-filter{display:flex;gap:8px;padding:8px 16px;overflow-x:auto;scrollbar-width:none;flex-wrap:nowrap}
 .vig-filter::-webkit-scrollbar{display:none}
 .vig-chip{flex-shrink:0;padding:6px 13px;border-radius:20px;font-size:12px;font-weight:600;border:1.5px solid var(--border);background:var(--surface);color:var(--text-mid);cursor:pointer;white-space:nowrap}
@@ -1428,7 +1425,7 @@ body.rilievo-fullscreen #bottom-nav { display: none; }
         <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a9 9 0 0 1 9 9c0 4.17-2.84 7.67-6.75 8.68L12 22l-2.25-2.32C5.84 18.67 3 15.17 3 11a9 9 0 0 1 9-9z"/><circle cx="12" cy="11" r="3"/></svg>
       </div>
       <div>
-        <div class="home-hero-title">VignApp Map <span style="font-size:11px; font-weight:600; opacity:.65; vertical-align:middle;">v. 36</span></div>
+        <div class="home-hero-title">VignApp Map <span style="font-size:11px; font-weight:600; opacity:.65; vertical-align:middle;">v. 37</span></div>
         <div class="home-hero-sub">App per rilievi puntuali pianta/pianta</div>
         <div id="home-date-str" style="font-size:11px;opacity:.55;margin-top:4px;text-transform:capitalize;letter-spacing:.2px;"></div>
       </div>
@@ -5937,10 +5934,10 @@ function syncClearAll() {
       <div id="sdm-piante" style="display:flex;flex-wrap:wrap;gap:5px"></div>
     </div>
     <div style="font-size:13px;color:var(--text-soft);margin-bottom:16px" id="sdm-note"></div>
-    <div class="ril-actions" style="margin-top:2px">
-      <button class="ril-action-btn close" onclick="closeSmpModal()">Chiudi</button>
-      <button class="ril-action-btn edit" onclick="editCampioneFromModal()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg> Modifica</button>
-      <button class="ril-action-btn del" onclick="deleteCampioneFromModal()"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg> Elimina</button>
+    <div class="form-actions" style="margin-top:2px">
+      <button class="btn-modal-close" onclick="closeSmpModal()">Chiudi</button>
+      <button class="btn-modal-edit" onclick="editCampioneFromModal()">Modifica</button>
+      <button class="btn-modal-del" onclick="deleteCampioneFromModal()">Elimina</button>
     </div>
   </div>
 </div>
