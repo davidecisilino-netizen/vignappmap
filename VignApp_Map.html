@@ -2128,7 +2128,7 @@ body.rilievo-fullscreen #bottom-nav { display: none; }
     <!-- Ricevi dal PC -->
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:12px">
       <div style="font-size:11px;font-weight:800;color:var(--vine);text-transform:uppercase;letter-spacing:.7px;margin-bottom:6px">Ricevi dati dal PC</div>
-      <p style="font-size:13px;color:var(--text-soft);margin-bottom:12px;line-height:1.5">Importa il file generato dal software PC (scheda Sincronizza → Esporta per Smartphone). I dati vengono <strong>uniti</strong> senza sovrascrivere quelli esistenti.</p>
+      <p style="font-size:13px;color:var(--text-soft);margin-bottom:12px;line-height:1.5">Importa il file generato dal software PC (scheda Sincronizza → Esporta per Smartphone). I dati del PC <strong>sovrascrivono</strong> quelli con lo stesso ID presenti sul telefono; quelli presenti solo sul telefono restano.</p>
       <label style="display:flex;align-items:center;justify-content:center;gap:8px;padding:13px;background:var(--vine-pale);color:var(--vine);border:2px dashed var(--vine-light);border-radius:12px;font-size:14px;font-weight:700;cursor:pointer">
         <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
         Carica JSON dal PC
@@ -5845,6 +5845,16 @@ function dedupeRilievi(arr) {
   return order.map(id => best.get(id));
 }
 
+// Inserisce o SOVRASCRIVE un record per id (usato quando il file arriva dal PC).
+// Se in locale esistono più copie con lo stesso id, ne resta una sola: quella del PC.
+function _upsertOverwrite(arr, rec) {
+  const idx = arr.findIndex(x => x.id === rec.id);
+  if (idx === -1) { arr.push(rec); return 'add'; }
+  arr[idx] = rec;
+  for (let i = arr.length - 1; i > idx; i--) if (arr[i].id === rec.id) arr.splice(i, 1);
+  return 'upd';
+}
+
 function syncImportFromPC(event) {
   const file = event.target.files[0]; event.target.value = '';
   if (!file) return;
@@ -5858,12 +5868,55 @@ function syncImportFromPC(event) {
     const inCP = data.customProtocols   || [];
     const inDB = data.deletedBuiltinIds || [];
     const inCV = data.customVarieta     || [];
+
+    // Un file esportato dal PC (sorgente:'desktop') è il dato validato: i record con
+    // lo stesso id vengono SOVRASCRITTI. Quelli presenti solo sul telefono restano.
+    // Un file di altra provenienza (es. un export mobile) mantiene la vecchia logica di sola unione.
+    const fromDesktop = data.sorgente === 'desktop';
+
+    if (fromDesktop) {
+      // Anteprima di cosa verrà sovrascritto, con conferma esplicita
+      const has = (arr, r) => arr.some(x => x.id === r.id);
+      const activeId = (typeof activeRilievo !== 'undefined' && activeRilievo) ? activeRilievo.id : null;
+      const nAz  = inAz.filter(a => has(aziende, a)).length;
+      const nV   = inV.filter(v => has(vineyards, v)).length;
+      const nCP  = inCP.filter(p => has(customProtocols, p)).length;
+      const nC   = (typeof campioni !== 'undefined') ? inC.filter(c => has(campioni, c)).length : 0;
+      const rilSovr = inR.filter(r => has(rilievi, r) && r.id !== activeId);
+      const nR   = rilSovr.length;
+      // Rilievi in cui il telefono ha più piante del PC: sono quelli che perderebbero lavoro
+      const nPersi = rilSovr.filter(r => {
+        const loc = rilievi.find(x => x.id === r.id);
+        return loc && (loc.plants || []).length > (r.plants || []).length;
+      }).length;
+      if (nAz + nV + nR + nC + nCP > 0) {
+        let m = 'Il file proviene dal PC: i dati con lo stesso ID verranno SOVRASCRITTI con quelli del PC.\n\n';
+        m += `• ${nV} vigneti\n• ${nR} rilievi\n• ${nC} campioni\n• ${nAz} aziende\n• ${nCP} protocolli\n\n`;
+        if (nPersi) m += `⚠️ In ${nPersi} rilievi il telefono ha PIÙ piante rispetto al PC: le piante in più andranno perse.\n\n`;
+        m += 'I dati presenti solo sul telefono restano invariati. Continuare?';
+        if (!confirm(m)) return;
+      }
+    }
+
     let addV=0, addR=0, updR=0, addC=0, addP=0, addVar=0, addAz=0;
+    let ovV=0, ovC=0, ovAz=0, ovP=0, skipR=0;
     // Le aziende vanno unite PRIMA dei vigneti, perché i vigneti in arrivo
     // referenziano gli id azienda tramite aziendaId.
-    inAz.forEach(a => { if (!aziende.find(x=>x.id===a.id)) { aziende.push(a); addAz++; } });
-    inV.forEach(v => { if (!vineyards.find(x=>x.id===v.id)) { vineyards.push(v); addV++; } });
+    inAz.forEach(a => {
+      if (fromDesktop) { (_upsertOverwrite(aziende, a) === 'add') ? addAz++ : ovAz++; }
+      else if (!aziende.find(x=>x.id===a.id)) { aziende.push(a); addAz++; }
+    });
+    inV.forEach(v => {
+      if (fromDesktop) { (_upsertOverwrite(vineyards, v) === 'add') ? addV++ : ovV++; }
+      else if (!vineyards.find(x=>x.id===v.id)) { vineyards.push(v); addV++; }
+    });
     inR.forEach(r => {
+      if (fromDesktop) {
+        // Non tocco il rilievo attualmente aperto: l'autosave lo riscriverebbe comunque
+        if (typeof activeRilievo !== 'undefined' && activeRilievo && activeRilievo.id === r.id) { skipR++; return; }
+        (_upsertOverwrite(rilievi, r) === 'add') ? addR++ : updR++;
+        return;
+      }
       const idx = rilievi.findIndex(x=>x.id===r.id);
       if (idx === -1) { rilievi.push(r); addR++; }
       else if (r.plants.length > rilievi[idx].plants.length) { rilievi[idx] = r; updR++; }
@@ -5873,10 +5926,16 @@ function syncImportFromPC(event) {
     // sempre a una sola, tenendo quella con più piante.
     rilievi = dedupeRilievi(rilievi);
     if (typeof campioni !== 'undefined') {
-      inC.forEach(c => { if (!campioni.find(x=>x.id===c.id)) { campioni.push(c); addC++; } });
+      inC.forEach(c => {
+        if (fromDesktop) { (_upsertOverwrite(campioni, c) === 'add') ? addC++ : ovC++; }
+        else if (!campioni.find(x=>x.id===c.id)) { campioni.push(c); addC++; }
+      });
     }
-    // Merge protocolli custom
-    inCP.forEach(p => { if (!customProtocols.find(x=>x.id===p.id)) { customProtocols.push(p); addP++; } });
+    // Protocolli custom: dal PC sovrascrivono per id, altrimenti solo unione
+    inCP.forEach(p => {
+      if (fromDesktop) { (_upsertOverwrite(customProtocols, p) === 'add') ? addP++ : ovP++; }
+      else if (!customProtocols.find(x=>x.id===p.id)) { customProtocols.push(p); addP++; }
+    });
     // Merge builtin eliminati
     inDB.forEach(id => { if (!deletedBuiltinIds.includes(id)) deletedBuiltinIds.push(id); });
     // Merge varietà custom
@@ -5884,10 +5943,18 @@ function syncImportFromPC(event) {
     saveData(); saveAziende(); saveCustomProtocols(); saveCustomVarieta();
     migrateAziendeFromLegacy();
     renderHome(); renderVineyards(); renderSyncStatus();
-    let msg = `Importati: ${addV} vigneti, ${addR} nuovi rilievi (+${updR} aggiornati), ${addC} campioni`;
-    if (addAz) msg += `, ${addAz} aziende`;
-    if (addP || addVar) msg += `, ${addP} protocolli, ${addVar} varietà`;
-    showToast(msg, 4000);
+    let msg;
+    if (fromDesktop) {
+      msg = `Dal PC: ${addV} vigneti nuovi (+${ovV} sovrascritti), ${addR} nuovi rilievi (+${updR} sovrascritti), ${addC} campioni (+${ovC} sovrascritti)`;
+      if (addAz || ovAz) msg += `, ${addAz} aziende (+${ovAz} sovrascritte)`;
+      if (addP || ovP || addVar) msg += `, ${addP} protocolli (+${ovP} sovrascritti), ${addVar} varietà`;
+      if (skipR) msg += `. ${skipR} rilievo aperto non toccato`;
+    } else {
+      msg = `Importati: ${addV} vigneti, ${addR} nuovi rilievi (+${updR} aggiornati), ${addC} campioni`;
+      if (addAz) msg += `, ${addAz} aziende`;
+      if (addP || addVar) msg += `, ${addP} protocolli, ${addVar} varietà`;
+    }
+    showToast(msg, 5000);
   }).catch(() => showToast('Errore lettura file'));
 }
 
