@@ -2,10 +2,15 @@
 // Scopo: 1) rendere l'app installabile (PWA) 2) farla funzionare anche senza rete in vigna,
 // dato che i dati veri restano su localStorage/IndexedDB nel browser, non qui.
 
-const CACHE_NAME = 'vignaapp-v39';
+// Versione dell'app: unica fonte in version.js (letta anche dalla pagina HTML
+// per la scritta "VignApp Map v. X" in home). Cambiare solo lì: qui il nome
+// della cache si aggiorna da solo, forzando il refresh dell'app shell.
+importScripts('./version.js');
+const CACHE_NAME = 'vignaapp-v' + self.APP_VERSION;
 const APP_SHELL = [
   './VignApp_Map.html',
   './manifest.json',
+  './version.js',
   './icon-192.png',
   './icon-512.png'
 ];

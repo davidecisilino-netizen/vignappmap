@@ -11,6 +11,7 @@
 <link rel="icon" href="icon-192.png" type="image/png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <title>VignApp Map</title>
+<script src="./version.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Source+Serif+4:wght@400;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -1425,7 +1426,7 @@ body.rilievo-fullscreen #bottom-nav { display: none; }
         <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a9 9 0 0 1 9 9c0 4.17-2.84 7.67-6.75 8.68L12 22l-2.25-2.32C5.84 18.67 3 15.17 3 11a9 9 0 0 1 9-9z"/><circle cx="12" cy="11" r="3"/></svg>
       </div>
       <div>
-        <div class="home-hero-title">VignApp Map <span style="font-size:11px; font-weight:600; opacity:.65; vertical-align:middle;">v. 38</span></div>
+        <div class="home-hero-title">VignApp Map <span id="app-version-label" style="font-size:11px; font-weight:600; opacity:.65; vertical-align:middle;"></span></div>
         <div class="home-hero-sub">App per rilievi puntuali pianta/pianta</div>
         <div id="home-date-str" style="font-size:11px;opacity:.55;margin-top:4px;text-transform:capitalize;letter-spacing:.2px;"></div>
       </div>
@@ -2701,6 +2702,9 @@ let mapFilter = 'all';
 /* ═══════════════════ INIT ═══════════════════ */
 window.onload = () => {
   migrateAziendeFromLegacy();
+  // Numero di versione: unica fonte in version.js, usata anche dal service worker
+  const vLabel = document.getElementById('app-version-label');
+  if (vLabel && typeof APP_VERSION !== 'undefined') vLabel.textContent = 'v. ' + APP_VERSION;
   const now = new Date();
   const opts = { weekday:'long', year:'numeric', month:'long', day:'numeric' };
   const ds = now.toLocaleDateString('it-IT', opts);
@@ -5941,6 +5945,7 @@ function syncImportFromPC(event) {
     // Merge varietà custom
     inCV.forEach(v => { if (!customVarieta.find(x=>x.toLowerCase()===v.toLowerCase())) { customVarieta.push(v); addVar++; } });
     saveData(); saveAziende(); saveCustomProtocols(); saveCustomVarieta();
+    if (typeof saveCampioniData === 'function') saveCampioniData();
     migrateAziendeFromLegacy();
     renderHome(); renderVineyards(); renderSyncStatus();
     let msg;
@@ -5974,6 +5979,7 @@ function syncRestoreBackup(event) {
     deletedBuiltinIds = data.deletedBuiltinIds || [];
     customVarieta     = data.customVarieta     || [];
     saveData(); saveAziende(); saveCustomProtocols(); saveCustomVarieta();
+    if (typeof saveCampioniData === 'function') saveCampioniData();
     migrateAziendeFromLegacy();
     renderHome(); renderVineyards(); renderSyncStatus();
     showToast(`Backup ripristinato: ${vineyards.length} vigneti, ${aziende.length} aziende, ${nProto} protocolli, ${customVarieta.length} varietà`);
