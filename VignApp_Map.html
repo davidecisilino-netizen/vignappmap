@@ -324,6 +324,17 @@ body {
 .badge-red   { background: #FEE2E2; color: #B91C1C; }
 .badge-grey  { background: var(--surface2); color: var(--text-soft); }
 .badge-blue  { background: #DBEAFE; color: #1D4ED8; }
+/* ── Risultato analisi di laboratorio (scheda campione) ── */
+.ris-box { background: var(--surface2); border-radius: 12px; padding: 12px; margin-bottom: 14px; border-left: 4px solid #0D7680; }
+.ris-box .ris-head { font-size: 11px; color: var(--text-soft); text-transform: uppercase; letter-spacing: .4px; font-weight: 700; margin-bottom: 8px; }
+.ris-row { display: flex; justify-content: space-between; gap: 10px; font-size: 13px; padding: 3px 0; }
+.ris-row .l { color: var(--text-soft); }
+.ris-row .v { font-weight: 600; text-align: right; }
+.ris-table { width: 100%; border-collapse: collapse; margin: 8px 0 4px; font-size: 13px; }
+.ris-table th { text-align: left; font-size: 10px; text-transform: uppercase; letter-spacing: .4px; color: var(--text-soft); padding: 4px 6px; border-bottom: 1px solid var(--border); }
+.ris-table td { padding: 5px 6px; border-bottom: 1px solid var(--border); }
+.ris-table tr:last-child td { border-bottom: none; }
+.ris-wait { font-size: 12px; color: var(--text-soft); }
 
 /* ── VIGNETI LIST ── */
 .list-header {
@@ -1946,7 +1957,7 @@ body.rilievo-fullscreen #bottom-nav { display: none; }
     </button>
   </div>
   <div class="search-wrap">
-    <input type="text" id="smp-search" placeholder="Cerca codice pianta, tipo analisi, laboratorio…" oninput="renderCampioni()">
+    <input type="text" id="smp-search" placeholder="Cerca codice, pianta, tipo analisi, laboratorio, esito…" oninput="renderCampioni()">
   </div>
   <div class="filter-row">
     <div class="fchip active" onclick="setSmpFilter(this,'all')">Tutti</div>
@@ -4931,6 +4942,33 @@ function saveCampione() {
   if (currentRilievodId && currentPage === 'page-rilievo-detail') openRilievo(currentRilievodId);
 }
 
+/* Risultato analisi di laboratorio: inserito dal desktop (campo c.risultato) e portato
+   sul telefono con l'import del file .json dal PC. Qui è SOLO in lettura. */
+const ESITO_BADGE = {'Positivo':'badge-red','Negativo':'badge-green','Dubbio / da ripetere':'badge-amber','Non valutabile':'badge-grey','Solo valori':'badge-blue'};
+function esitoBadge(c) {
+  const r = c && c.risultato;
+  if (!r) return '';
+  return `<span class="badge ${ESITO_BADGE[r.esito] || 'badge-grey'}">${esc(r.esito || 'Risultato')}</span>`;
+}
+function renderRisultatoHtml(c) {
+  const r = c && c.risultato;
+  if (!r) {
+    return `<div class="ris-box"><div class="ris-head">Risultato analisi</div><div class="ris-wait">Nessun risultato ancora disponibile${c && c.laboratorio ? ' (in attesa di ' + esc(c.laboratorio) + ')' : ''}. Viene inserito dal PC e compare qui dopo l'importazione.</div></div>`;
+  }
+  const row = (l, v) => v ? `<div class="ris-row"><span class="l">${l}</span><span class="v">${esc(v)}</span></div>` : '';
+  const fmtData = d => { if (!d) return ''; const m = String(d).match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? `${m[3]}/${m[2]}/${m[1]}` : d; };
+  const par = (Array.isArray(r.parametri) ? r.parametri : []).filter(x => x && (x.nome || x.valore));
+  return `<div class="ris-box">
+    <div class="ris-head">Risultato analisi</div>
+    <div class="ris-row"><span class="l">Esito</span><span class="v">${esitoBadge(c)}</span></div>
+    ${row('Data referto', fmtData(r.dataReferto))}
+    ${row('N° referto', r.numeroReferto)}
+    ${row('Metodo', r.metodo)}
+    ${par.length ? `<table class="ris-table"><thead><tr><th>Parametro</th><th>Valore</th><th>Unità</th></tr></thead><tbody>${par.map(x => `<tr><td>${esc(x.nome || '')}</td><td><strong>${esc(x.valore || '')}</strong></td><td>${esc(x.unita || '')}</td></tr>`).join('')}</tbody></table>` : ''}
+    ${r.note ? `<div style="font-size:12px;color:var(--text-mid);margin-top:6px">${esc(r.note)}</div>` : ''}
+  </div>`;
+}
+
 function renderCampioni() {
   const list = document.getElementById('campioni-list');
   if (!list) return;
@@ -4940,7 +4978,12 @@ function renderCampioni() {
     const mq = !search || (c.piante||[]).some(p => p.toLowerCase().includes(search))
       || (c.tipo||'').toLowerCase().includes(search)
       || (c.laboratorio||'').toLowerCase().includes(search)
-      || (c.vineyardName||'').toLowerCase().includes(search);
+      || (c.vineyardName||'').toLowerCase().includes(search)
+      || (c.codice||'').toLowerCase().includes(search)
+      || (c.risultato && (
+            (c.risultato.esito||'').toLowerCase().includes(search)
+         || (c.risultato.numeroReferto||'').toLowerCase().includes(search)
+         || (c.risultato.parametri||[]).some(x => x && ((x.nome||'').toLowerCase().includes(search) || (x.valore||'').toLowerCase().includes(search)))));
     return ms && mq;
   });
 
@@ -4980,6 +5023,7 @@ function renderCampioni() {
           `</div>`+
           `<div class="ril-right">`+
             `<span style="font-size:11px;font-weight:700;color:${sc}">${c.stato||'—'}</span>`+
+            esitoBadge(c)+
           `</div>`+
         `</div>`+
       `</div>`;
@@ -5014,6 +5058,10 @@ function openSmpModal(id) {
     ['Conservazione', c.conservazione || '—'],
     ['Stato',         c.stato || '—'],
   ].map(([l,v]) => '<div class="mig-item"><label>' + esc(l) + '</label><span>' + esc(v) + '</span></div>').join('');
+
+  // Risultato analisi di laboratorio (se già importato dal PC)
+  const rb = document.getElementById('sdm-risultato');
+  if (rb) rb.innerHTML = renderRisultatoHtml(c);
 
   // Piante con coordinate GPS
   const pp = document.getElementById('sdm-piante');
@@ -5120,7 +5168,8 @@ function exportCampioniCsv() {
     'ID campione', 'Codice campione', 'Vigneto', 'Data prelievo', 'Tipo analisi', 'Parte pianta',
     'Laboratorio', 'Codice pianta', 'Filare', 'Posizione', 'Classificazione',
     'Latitudine', 'Longitudine', 'GPS disponibile',
-    'N contenitori', 'Operatore', 'Stato', 'Conservazione', 'Note'
+    'N contenitori', 'Operatore', 'Stato', 'Conservazione', 'Note',
+    'Esito', 'Data referto', 'N referto', 'Metodo', 'Parametri', 'Note referto'
   ];
 
   const rows = [];
@@ -5150,7 +5199,14 @@ function exportCampioniCsv() {
         c.operatore || '',
         c.stato || '',
         c.conservazione || '',
-        c.note || ''
+        c.note || '',
+        (c.risultato && c.risultato.esito) || '',
+        (c.risultato && c.risultato.dataReferto) || '',
+        (c.risultato && c.risultato.numeroReferto) || '',
+        (c.risultato && c.risultato.metodo) || '',
+        ((c.risultato && c.risultato.parametri) || []).filter(x => x && (x.nome || x.valore))
+          .map(x => (x.nome || '') + ': ' + (x.valore || '') + (x.unita ? ' ' + x.unita : '')).join(' | '),
+        (c.risultato && c.risultato.note) || ''
       ]);
     });
   });
@@ -5903,7 +5959,7 @@ function syncImportFromPC(event) {
     }
 
     let addV=0, addR=0, updR=0, addC=0, addP=0, addVar=0, addAz=0;
-    let ovV=0, ovC=0, ovAz=0, ovP=0, skipR=0;
+    let ovV=0, ovC=0, ovAz=0, ovP=0, skipR=0, nRis=0;
     // Le aziende vanno unite PRIMA dei vigneti, perché i vigneti in arrivo
     // referenziano gli id azienda tramite aziendaId.
     inAz.forEach(a => {
@@ -5931,8 +5987,12 @@ function syncImportFromPC(event) {
     rilievi = dedupeRilievi(rilievi);
     if (typeof campioni !== 'undefined') {
       inC.forEach(c => {
-        if (fromDesktop) { (_upsertOverwrite(campioni, c) === 'add') ? addC++ : ovC++; }
-        else if (!campioni.find(x=>x.id===c.id)) { campioni.push(c); addC++; }
+        if (fromDesktop) { (_upsertOverwrite(campioni, c) === 'add') ? addC++ : ovC++; if (c.risultato) nRis++; }
+        else {
+          const ex = campioni.find(x=>x.id===c.id);
+          if (!ex) { campioni.push(c); addC++; }
+          else if (c.risultato && !ex.risultato) { ex.risultato = c.risultato; if (c.stato) ex.stato = c.stato; nRis++; }
+        }
       });
     }
     // Protocolli custom: dal PC sovrascrivono per id, altrimenti solo unione
@@ -5951,11 +6011,13 @@ function syncImportFromPC(event) {
     let msg;
     if (fromDesktop) {
       msg = `Dal PC: ${addV} vigneti nuovi (+${ovV} sovrascritti), ${addR} nuovi rilievi (+${updR} sovrascritti), ${addC} campioni (+${ovC} sovrascritti)`;
+      if (nRis) msg += ` — ${nRis} con risultato di laboratorio`;
       if (addAz || ovAz) msg += `, ${addAz} aziende (+${ovAz} sovrascritte)`;
       if (addP || ovP || addVar) msg += `, ${addP} protocolli (+${ovP} sovrascritti), ${addVar} varietà`;
       if (skipR) msg += `. ${skipR} rilievo aperto non toccato`;
     } else {
       msg = `Importati: ${addV} vigneti, ${addR} nuovi rilievi (+${updR} aggiornati), ${addC} campioni`;
+      if (nRis) msg += ` (+${nRis} risultati)`;
       if (addAz) msg += `, ${addAz} aziende`;
       if (addP || addVar) msg += `, ${addP} protocolli, ${addVar} varietà`;
     }
@@ -6005,6 +6067,7 @@ function syncClearAll() {
     <div class="modal-title" id="sdm-title">Campione</div>
     <div id="sdm-id" style="font-family:var(--font-mono);font-size:12px;color:var(--text-soft);margin-bottom:12px"></div>
     <div class="modal-info-grid" id="sdm-grid"></div>
+    <div id="sdm-risultato"></div>
     <div style="margin-bottom:14px">
       <div style="font-size:11px;color:var(--text-soft);margin-bottom:6px;text-transform:uppercase;letter-spacing:.4px;font-weight:700">Piante campionate</div>
       <div id="sdm-piante" style="display:flex;flex-wrap:wrap;gap:5px"></div>
