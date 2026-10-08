@@ -1259,6 +1259,11 @@ body.rilievo-fullscreen #bottom-nav { display: none; }
 .vig-filter::-webkit-scrollbar{display:none}
 .vig-chip{flex-shrink:0;padding:6px 13px;border-radius:20px;font-size:12px;font-weight:600;border:1.5px solid var(--border);background:var(--surface);color:var(--text-mid);cursor:pointer;white-space:nowrap}
 .vig-chip.active{background:var(--vine);color:#fff;border-color:var(--vine)}
+.tipo-grp-title{font-size:10.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--text-soft);margin:10px 0 6px}
+.tipo-grp-title:first-child{margin-top:2px}
+.tipo-chips{display:flex;flex-wrap:wrap;gap:6px}
+.tipo-chips .vig-chip{white-space:normal;text-align:left;line-height:1.25}
+.tipo-chips .vig-chip.active::before{content:'✓ '}
 .classif-mini-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin:12px 0}
 .classif-mini-btn{border:none;border-radius:10px;padding:12px 6px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:5px;font-size:12px;font-weight:700;color:#fff;transition:transform .1s;position:relative}
 .classif-mini-btn:active{transform:scale(.94)}
@@ -2039,27 +2044,8 @@ body.rilievo-fullscreen #bottom-nav { display: none; }
       </select>
     </div>
     <div class="form-group">
-      <label>Tipo di analisi *</label>
-      <select id="cf-tipo">
-        <option value="">— seleziona —</option>
-        <optgroup label="Analisi molecolari">
-          <option value="Genetica">Identificazione varietale</option>
-          <option value="Virologia">Virus</option>
-          <option value="Fitopatologia">Fitoplasmi</option>
-        </optgroup>
-        <optgroup label="Analisi biologiche">
-          <option value="Fitopatologia">Fitopatologia (isolamento patogeno)</option>
-          <option value="Entomologia">Entomologia (identificazione insetto)</option>
-        </optgroup>
-        <optgroup label="Analisi chimiche / nutrizionali">
-          <option value="Nutrizione">Nutrizione minerale (fogliari)</option>
-          <option value="Nutrizione">Analisi suolo</option>
-          <option value="Nutrizione">Residui fitofarmaci</option>
-        </optgroup>
-        <optgroup label="Altro">
-          <option value="Altro">Altro (vedi note)</option>
-        </optgroup>
-      </select>
+      <label>Tipo di analisi * <span id="cf-tipo-count" style="font-weight:500;color:var(--text-soft);text-transform:none;letter-spacing:0">(puoi sceglierne più di uno)</span></label>
+      <div id="cf-tipo-wrap"></div>
     </div>
     <div class="form-group">
       <label>Laboratorio</label>
@@ -2431,7 +2417,6 @@ function enhanceAllSelects() {
   enhanceSelect('stats-sel',       'sel-face-mid');
   enhanceSelect('cf-rilievo',      'sel-face-form');
   enhanceSelect('cf-parte',        'sel-face-form');
-  enhanceSelect('cf-tipo',         'sel-face-form');
   enhanceSelect('rl-vig-filter',   'sel-face-mid', { flex: true });
   enhanceSelect('rie-stato',       'sel-face-mid');
 }
@@ -4772,6 +4757,69 @@ function schemaClickPlant(f, pos) {
 
 /* ═══════════════════ CAMPIONI ═══════════════════ */
 let campioni = JSON.parse(localStorage.getItem('vt_campioni') || '[]');
+
+/* ═══════════ TIPI DI ANALISI (selezione multipla) ═══════════
+   Un campione può essere sottoposto a più analisi (es. virus + fitoplasmi).
+   Campi salvati sul campione:
+     tipiAnalisi    → etichette scelte (es. ["Virus","Fitoplasmi"])
+     tipoCategories → categorie senza doppioni (es. ["Virologia","Fitopatologia"])
+     tipoCategory   → prima categoria (compatibilità con filtri/risultati esistenti)
+     tipo           → categorie unite con " + " (compatibilità: ricerca, CSV, elenchi) */
+const TIPI_ANALISI=[
+  {label:'Identificazione varietale',             cat:'Genetica',      group:'Analisi molecolari'},
+  {label:'Virus',                                 cat:'Virologia',     group:'Analisi molecolari'},
+  {label:'Fitoplasmi',                            cat:'Fitopatologia', group:'Analisi molecolari'},
+  {label:'Fitopatologia (isolamento patogeno)',   cat:'Fitopatologia', group:'Analisi biologiche'},
+  {label:'Entomologia (identificazione insetto)', cat:'Entomologia',   group:'Analisi biologiche'},
+  {label:'Nutrizione minerale (fogliari)',        cat:'Nutrizione',    group:'Analisi chimiche / nutrizionali'},
+  {label:'Analisi suolo',                         cat:'Nutrizione',    group:'Analisi chimiche / nutrizionali'},
+  {label:'Residui fitofarmaci',                   cat:'Nutrizione',    group:'Analisi chimiche / nutrizionali'},
+  {label:'Altro (vedi note)',                     cat:'Altro',         group:'Altro'}
+];
+/* dai campi del campione alle etichette selezionate (gestisce anche i campioni "vecchi" con solo tipo) */
+function tipiFromCampione(c){
+  if(!c) return [];
+  const valid=new Set(TIPI_ANALISI.map(t=>t.label));
+  if(Array.isArray(c.tipiAnalisi)&&c.tipiAnalisi.length) return c.tipiAnalisi.filter(l=>valid.has(l));
+  const out=[];
+  String(c.tipo||'').split('+').map(x=>x.trim()).filter(Boolean).forEach(tok=>{
+    const o=TIPI_ANALISI.find(t=>t.label===tok)||TIPI_ANALISI.find(t=>t.cat===tok);
+    if(o&&!out.includes(o.label)) out.push(o.label);
+  });
+  return out;
+}
+/* dalle etichette selezionate ai campi da salvare */
+function tipoFieldsFromLabels(labels){
+  const sel=TIPI_ANALISI.filter(t=>labels.includes(t.label));          // ordine stabile
+  const cats=[...new Set(sel.map(t=>t.cat))];
+  return {tipiAnalisi:sel.map(t=>t.label), tipoCategories:cats, tipoCategory:cats[0]||'', tipo:cats.join(' + ')};
+}
+/* categorie di un campione (anche vecchio) */
+function categorieCampione(c){
+  if(c&&Array.isArray(c.tipoCategories)&&c.tipoCategories.length) return c.tipoCategories;
+  const base=(c&&(c.tipoCategory||c.tipo))||'';
+  return base?[base]:[];
+}
+
+let selectedTipi = [];
+function renderTipoPicker() {
+  const wrap = document.getElementById('cf-tipo-wrap'); if (!wrap) return;
+  const groups = [...new Set(TIPI_ANALISI.map(t => t.group))];
+  wrap.innerHTML = groups.map(g =>
+    '<div class="tipo-grp-title">' + esc(g) + '</div><div class="tipo-chips">' +
+    TIPI_ANALISI.filter(t => t.group === g).map(t =>
+      '<div class="vig-chip' + (selectedTipi.includes(t.label) ? ' active' : '') + '" data-tipo="' + esc(t.label) + '" onclick="toggleTipoAnalisi(this.dataset.tipo)">' + esc(t.label) + '</div>'
+    ).join('') + '</div>').join('');
+  const cnt = document.getElementById('cf-tipo-count');
+  if (cnt) cnt.textContent = selectedTipi.length ? '(' + selectedTipi.length + ' selezionat' + (selectedTipi.length === 1 ? 'o' : 'i') + ')' : '(puoi sceglierne più di uno)';
+}
+function toggleTipoAnalisi(label) {
+  const i = selectedTipi.indexOf(label);
+  if (i >= 0) selectedTipi.splice(i, 1); else selectedTipi.push(label);
+  renderTipoPicker();
+}
+function setSelectedTipi(arr) { selectedTipi = [...arr]; renderTipoPicker(); }
+
 let smpFilter = 'all';
 let editingCampioneId = null;
 let selectedPiante = [];
@@ -4794,10 +4842,11 @@ function openNewCampione() {
     }).join('');
   if (sel._syncFace) sel._syncFace();
   // Reset fields
-  ['cf-codice','cf-parte','cf-tipo','cf-lab','cf-data','cf-ncontenitori','cf-operatore','cf-note'].forEach(id => {
+  ['cf-codice','cf-parte','cf-lab','cf-data','cf-ncontenitori','cf-operatore','cf-note'].forEach(id => {
     const el = document.getElementById(id);
     if (el) { el.value = ''; if (el._syncFace) el._syncFace(); }
   });
+  setSelectedTipi([]);
   document.getElementById('cf-piante-wrap').style.display = 'none';
   document.getElementById('cf-data').value = new Date().toISOString().split('T')[0];
   document.getElementById('cf-operatore').value = getCurrentUserName();
@@ -4881,8 +4930,8 @@ function saveCampione() {
   if (selectedPiante.length === 0) { showToast('Seleziona almeno una pianta'); return; }
   const parte = document.getElementById('cf-parte').value;
   if (!parte) { showToast('Seleziona la parte della pianta'); return; }
-  const tipo = document.getElementById('cf-tipo').value;
-  if (!tipo) { showToast('Seleziona il tipo di analisi'); return; }
+  if (selectedTipi.length === 0) { showToast('Seleziona almeno un tipo di analisi'); return; }
+  const tipoFields = tipoFieldsFromLabels(selectedTipi);
   const data = document.getElementById('cf-data').value;
   if (!data) { showToast('Inserisci la data di prelievo'); return; }
 
@@ -4914,8 +4963,8 @@ function saveCampione() {
     vineyardName:  r ? r.vineyardName : '',
     piante:        [...selectedPiante],
     pianteDettaglio,                          // <-- NUOVO: array con GPS
-    parte, tipo,
-    tipoCategory:  document.getElementById('cf-tipo').selectedOptions[0]?.value || tipo,
+    parte,
+    ...tipoFields,                            // tipo, tipoCategory, tipoCategories, tipiAnalisi
     laboratorio:   document.getElementById('cf-lab').value,
     data,
     nContenitori:  document.getElementById('cf-ncontenitori').value,
@@ -4977,7 +5026,7 @@ function renderCampioni() {
   if (!list) return;
   const search = (document.getElementById('smp-search') || {value:''}).value.toLowerCase();
   let filtered = campioni.filter(c => {
-    const ms = smpFilter === 'all' || c.tipoCategory === smpFilter || c.tipo === smpFilter;
+    const ms = smpFilter === 'all' || categorieCampione(c).includes(smpFilter) || c.tipo === smpFilter;
     const mq = !search || (c.piante||[]).some(p => p.toLowerCase().includes(search))
       || (c.tipo||'').toLowerCase().includes(search)
       || (c.laboratorio||'').toLowerCase().includes(search)
@@ -5055,6 +5104,7 @@ function openSmpModal(id) {
     ['Vigneto',       c.vineyardName || (r ? r.vineyardName : '—')],
     ['Data',          c.data || '—'],
     ['Parte pianta',  c.parte || '—'],
+    ['Analisi richieste', (c.tipiAnalisi && c.tipiAnalisi.length) ? c.tipiAnalisi.join(', ') : (c.tipo || '—')],
     ['Laboratorio',   c.laboratorio || '—'],
     ['N° contenitori',c.nContenitori || '—'],
     ['Operatore',     c.operatore || '—'],
@@ -5121,9 +5171,7 @@ function editCampioneFromModal() {
   loadPiantePicker(true);
   setSel('cf-parte', c.parte || '');
   // Set tipo
-  const tipoSel = document.getElementById('cf-tipo');
-  for (let opt of tipoSel.options) { if (opt.text === c.tipo || opt.value === c.tipo) { tipoSel.value = opt.value; break; } }
-  if (tipoSel._syncFace) tipoSel._syncFace();
+  setSelectedTipi(tipiFromCampione(c));
   document.getElementById('cf-lab').value = c.laboratorio || '';
   document.getElementById('cf-data').value = c.data || '';
   document.getElementById('cf-ncontenitori').value = c.nContenitori || '';
