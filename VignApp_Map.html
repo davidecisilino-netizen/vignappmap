@@ -2013,6 +2013,51 @@ body.rilievo-fullscreen #bottom-nav { display: none; }
       <input type="text" id="cf-codice" placeholder="Es. DC_260923_01">
     </div>
     <div class="form-group">
+      <label>Tipo di campione</label>
+      <div class="tipo-chips" id="cf-mode-chips"></div>
+      <div id="cf-mode-hint" style="font-size:11px;color:var(--text-soft);margin-top:6px"></div>
+    </div>
+    <div class="form-group">
+      <label>Prelievo da</label>
+      <div class="tipo-chips" id="cf-prelievo-chips"></div>
+    </div>
+    <div class="form-group" id="cf-pool-wrap" style="display:none">
+      <label>N° piante nel pool *</label>
+      <input type="number" id="cf-pool-n" min="2" step="1" placeholder="Es. 5">
+    </div>
+    <div class="form-group cf-spot-only" style="display:none">
+      <label>Vigneto <span style="font-weight:400;color:var(--text-soft);text-transform:none;letter-spacing:0">(facoltativo)</span></label>
+      <select id="cf-vigneto">
+        <option value="">— nessun vigneto in archivio —</option>
+      </select>
+    </div>
+    <div class="form-group cf-spot-only" style="display:none">
+      <label>Posizione / riferimento pianta</label>
+      <input type="text" id="cf-spot-pos" placeholder="Es. Filare 5, vicino al pozzo">
+    </div>
+    <div class="form-group cf-spot-only" style="display:none">
+      <label>Stato della pianta / delle piante *</label>
+      <div class="tipo-chips" id="cf-stato-chips"></div>
+    </div>
+    <div class="form-group" id="cf-sintomi-wrap" style="display:none">
+      <label>Sintomi osservati</label>
+      <input type="text" id="cf-sintomi" list="cf-sintomi-list" placeholder="Es. Giallumi, accartocciamento fogliare…">
+      <datalist id="cf-sintomi-list">
+        <option value="Giallumi"><option value="Accartocciamento fogliare"><option value="Arrossamento fogliare">
+        <option value="Clorosi nervale"><option value="Disseccamento del rachide"><option value="Mancata lignificazione dei tralci">
+        <option value="Deperimento / scarso vigore"><option value="Sintomi tipo esca"><option value="Altro (vedi note)">
+      </datalist>
+    </div>
+    <div class="form-group cf-spot-only" style="display:none">
+      <label>Coordinate GPS <span style="font-weight:400;color:var(--text-soft);text-transform:none;letter-spacing:0">(facoltative)</span></label>
+      <div style="display:flex;gap:8px;align-items:center">
+        <input type="number" id="cf-lat" placeholder="Latitudine" step="0.000001" style="flex:1">
+        <input type="number" id="cf-lon" placeholder="Longitudine" step="0.000001" style="flex:1">
+        <button type="button" onclick="getCfSpotGps()" id="cf-gps-btn" style="flex-shrink:0;background:var(--vine);color:#fff;border:none;border-radius:10px;padding:12px 10px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap">GPS</button>
+      </div>
+      <div style="font-size:11px;color:var(--text-soft);margin-top:5px" id="cf-gps-status"></div>
+    </div>
+    <div class="form-group cf-rilievo-only">
       <label>Rilievo di riferimento *</label>
       <select id="cf-rilievo" onchange="loadPiantePicker()">
         <option value="">— seleziona rilievo —</option>
@@ -2416,6 +2461,7 @@ function enhanceAllSelects() {
   enhanceSelect('nv-azienda-sel',    'sel-face-form');
   enhanceSelect('stats-sel',       'sel-face-mid');
   enhanceSelect('cf-rilievo',      'sel-face-form');
+  enhanceSelect('cf-vigneto',      'sel-face-form');
   enhanceSelect('cf-parte',        'sel-face-form');
   enhanceSelect('rl-vig-filter',   'sel-face-mid', { flex: true });
   enhanceSelect('rie-stato',       'sel-face-mid');
@@ -4828,6 +4874,77 @@ function saveCampioniData() {
   localStorage.setItem('vt_campioni', JSON.stringify(campioni));
 }
 
+/* ── Campione "spot": prelievo senza rilievo/mappatura ──
+   Campi sul campione: spot (true), statoPianta ('Sintomatica'|'Asintomatica'), sintomi,
+   posizione, lat/lon (facoltativi). Nessun rilievo né piante mappate: rilievodId='' e piante=[]. */
+let cfMode = 'rilievo', cfSpotStato = '';
+function renderCfModeChips() {
+  const w = document.getElementById('cf-mode-chips'); if (!w) return;
+  w.innerHTML = [['rilievo','Da rilievo (pianta mappata)'],['spot','Spot (senza rilievo)']]
+    .map(([k,l]) => '<div class="vig-chip' + (cfMode === k ? ' active' : '') + '" onclick="setCfMode(\'' + k + '\')">' + l + '</div>').join('');
+  const h = document.getElementById('cf-mode-hint');
+  if (h) h.textContent = cfMode === 'spot' ? 'Prelievo occasionale su una pianta non mappata: indica se è sintomatica o asintomatica.' : '';
+}
+function renderCfStatoChips() {
+  const w = document.getElementById('cf-stato-chips'); if (!w) return;
+  w.innerHTML = ['Sintomatica','Asintomatica'].map(k =>
+    '<div class="vig-chip' + (cfSpotStato === k ? ' active' : '') + '" onclick="setCfSpotStato(\'' + k + '\')">' + k + '</div>').join('');
+  const sw = document.getElementById('cf-sintomi-wrap');
+  if (sw) sw.style.display = (cfMode === 'spot' && cfSpotStato === 'Sintomatica') ? '' : 'none';
+}
+/* Prelievo: pianta singola (default) oppure pool di piante.
+   Campi sul campione: prelievo, nPiantePool. Nello spot il numero si digita; nel campione
+   da rilievo coincide con le piante selezionate. */
+let cfPrelievo = 'Pianta singola';
+function smpPrelievoLabel(c) {
+  if (!c || !c.prelievo) return '';
+  if (c.prelievo === 'Pool di piante') { const n = c.nPiantePool || (c.piante || []).length; return n ? 'Pool di ' + n + ' piante' : 'Pool di piante'; }
+  return 'Pianta singola';
+}
+function renderCfPrelievoChips() {
+  const w = document.getElementById('cf-prelievo-chips'); if (!w) return;
+  w.innerHTML = ['Pianta singola','Pool di piante'].map(k =>
+    '<div class="vig-chip' + (cfPrelievo === k ? ' active' : '') + '" onclick="setCfPrelievo(\'' + k + '\')">' + k + '</div>').join('');
+  const pw = document.getElementById('cf-pool-wrap');
+  if (pw) pw.style.display = (cfMode === 'spot' && cfPrelievo === 'Pool di piante') ? '' : 'none';
+}
+function setCfPrelievo(v) { cfPrelievo = v; renderCfPrelievoChips(); }
+function setCfSpotStato(v) { cfSpotStato = (cfSpotStato === v ? '' : v); renderCfStatoChips(); }
+function setCfMode(m) {
+  cfMode = m;
+  document.querySelectorAll('.cf-spot-only').forEach(el => { el.style.display = m === 'spot' ? '' : 'none'; });
+  document.querySelectorAll('.cf-rilievo-only').forEach(el => { el.style.display = m === 'rilievo' ? '' : 'none'; });
+  if (m === 'spot') document.getElementById('cf-piante-wrap').style.display = 'none';
+  else loadPiantePicker(true);
+  renderCfModeChips(); renderCfStatoChips(); renderCfPrelievoChips();
+}
+function populateCfVigneto(selId) {
+  const sel = document.getElementById('cf-vigneto'); if (!sel) return;
+  sel.innerHTML = '<option value="">— nessun vigneto in archivio —</option>' +
+    [...vineyards].sort((a,b) => (a.name||'').localeCompare(b.name||'', 'it')).map(v =>
+      '<option value="' + esc(v.id) + '"' + (v.id === selId ? ' selected' : '') + '>' + esc(v.name) + (v.azienda ? ' (' + esc(v.azienda) + ')' : '') + '</option>').join('');
+  sel.value = selId || '';
+  if (sel._syncFace) sel._syncFace();
+}
+function getCfSpotGps() {
+  const btn = document.getElementById('cf-gps-btn');
+  const status = document.getElementById('cf-gps-status');
+  if (!window.isSecureContext) { status.textContent = 'Pagina non sicura (apri via https, non da file locale) — GPS bloccato dal browser'; return; }
+  if (!navigator.geolocation) { status.textContent = 'GPS non disponibile su questo dispositivo'; return; }
+  btn.textContent = '⏳'; btn.disabled = true;
+  status.textContent = 'Acquisizione coordinate GPS…';
+  navigator.geolocation.getCurrentPosition(
+    pos => {
+      document.getElementById('cf-lat').value = pos.coords.latitude.toFixed(7);
+      document.getElementById('cf-lon').value = pos.coords.longitude.toFixed(7);
+      status.textContent = 'GPS acquisito (±' + Math.round(pos.coords.accuracy) + 'm)';
+      btn.textContent = 'GPS'; btn.disabled = false;
+    },
+    err => { status.textContent = describeGeoError(err); btn.textContent = 'GPS'; btn.disabled = false; },
+    { enableHighAccuracy: true, timeout: 12000 }
+  );
+}
+
 function openNewCampione() {
   editingCampioneId = null;
   selectedPiante = [];
@@ -4848,6 +4965,11 @@ function openNewCampione() {
   });
   setSelectedTipi([]);
   document.getElementById('cf-piante-wrap').style.display = 'none';
+  cfSpotStato = ''; cfPrelievo = 'Pianta singola';
+  ['cf-pool-n','cf-spot-pos','cf-sintomi','cf-lat','cf-lon'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  const gst = document.getElementById('cf-gps-status'); if (gst) gst.textContent = '';
+  populateCfVigneto('');
+  setCfMode('rilievo');
   document.getElementById('cf-data').value = new Date().toISOString().split('T')[0];
   document.getElementById('cf-operatore').value = getCurrentUserName();
   document.getElementById('cf-codice').value = generateCampioneCodice(document.getElementById('cf-data').value);
@@ -4925,9 +5047,15 @@ function updatePianteCount() {
 }
 
 function saveCampione() {
-  const rilId = document.getElementById('cf-rilievo').value;
-  if (!rilId) { showToast('Seleziona un rilievo'); return; }
-  if (selectedPiante.length === 0) { showToast('Seleziona almeno una pianta'); return; }
+  const spot = (cfMode === 'spot');
+  const rilId = spot ? '' : document.getElementById('cf-rilievo').value;
+  if (spot) {
+    if (!cfSpotStato) { showToast('Indica se la pianta è sintomatica o asintomatica'); return; }
+    if (cfPrelievo === 'Pool di piante' && !(parseInt(document.getElementById('cf-pool-n').value, 10) >= 2)) { showToast('Indica quante piante compongono il pool (almeno 2)'); return; }
+  } else {
+    if (!rilId) { showToast('Seleziona un rilievo'); return; }
+    if (selectedPiante.length === 0) { showToast('Seleziona almeno una pianta'); return; }
+  }
   const parte = document.getElementById('cf-parte').value;
   if (!parte) { showToast('Seleziona la parte della pianta'); return; }
   if (selectedTipi.length === 0) { showToast('Seleziona almeno un tipo di analisi'); return; }
@@ -4953,15 +5081,26 @@ function saveCampione() {
   }
 
   // Array dettagliato delle piante campionate (con GPS se disponibile)
-  const pianteDettaglio = selectedPiante.map(cod => pianteGps[cod] || { codice: cod, lat: null, lon: null });
+  const pianteDettaglio = spot ? [] : selectedPiante.map(cod => pianteGps[cod] || { codice: cod, lat: null, lon: null });
+  const spotV = spot ? vineyards.find(v => v.id === document.getElementById('cf-vigneto').value) : null;
+  const _lat = parseFloat(document.getElementById('cf-lat').value), _lon = parseFloat(document.getElementById('cf-lon').value);
 
   const existingC = editingCampioneId ? campioni.find(x => x.id === editingCampioneId) : null;
 
   const campoComuni = {
     codice:        document.getElementById('cf-codice').value,
     rilievodId:    rilId,
-    vineyardName:  r ? r.vineyardName : '',
-    piante:        [...selectedPiante],
+    vineyardId:    spot ? (spotV ? spotV.id : '') : (r ? r.vineyardId : ''),
+    vineyardName:  spot ? (spotV ? spotV.name : 'Campione spot') : (r ? r.vineyardName : ''),
+    spot,
+    prelievo:      cfPrelievo,
+    nPiantePool:   cfPrelievo === 'Pool di piante' ? (spot ? parseInt(document.getElementById('cf-pool-n').value, 10) : selectedPiante.length) : '',
+    statoPianta:   spot ? cfSpotStato : '',
+    sintomi:       (spot && cfSpotStato === 'Sintomatica') ? document.getElementById('cf-sintomi').value.trim() : '',
+    posizione:     spot ? document.getElementById('cf-spot-pos').value.trim() : '',
+    lat:           (spot && isFinite(_lat)) ? _lat : null,
+    lon:           (spot && isFinite(_lon)) ? _lon : null,
+    piante:        spot ? [] : [...selectedPiante],
     pianteDettaglio,                          // <-- NUOVO: array con GPS
     parte,
     ...tipoFields,                            // tipo, tipoCategory, tipoCategories, tipiAnalisi
@@ -4980,7 +5119,7 @@ function saveCampione() {
     showToast('Campione aggiornato');
   } else {
     campioni.push({ id: 'c_' + Date.now(), ...campoComuni, createdAt: new Date().toISOString() });
-    showToast('Campione salvato — ' + selectedPiante.length + ' piante');
+    showToast(spot ? 'Campione spot salvato' : 'Campione salvato — ' + selectedPiante.length + ' piante');
   }
 
   saveCampioniData();
@@ -5028,6 +5167,9 @@ function renderCampioni() {
   let filtered = campioni.filter(c => {
     const ms = smpFilter === 'all' || categorieCampione(c).includes(smpFilter) || c.tipo === smpFilter;
     const mq = !search || (c.piante||[]).some(p => p.toLowerCase().includes(search))
+      || (c.posizione||'').toLowerCase().includes(search)
+      || (c.sintomi||'').toLowerCase().includes(search)
+      || (c.statoPianta||'').toLowerCase().includes(search)
       || (c.tipo||'').toLowerCase().includes(search)
       || (c.laboratorio||'').toLowerCase().includes(search)
       || (c.vineyardName||'').toLowerCase().includes(search)
@@ -5071,7 +5213,7 @@ function renderCampioni() {
           `<div class="ril-inner">`+
             `<div class="ril-vineyard">${c.codice ? esc(c.codice) + ' — ' : ''}${esc(c.tipo)||'—'}</div>`+
             `<div class="ril-date">${esc(c.data)||'—'}${c.operatore ? ' · ' + esc(c.operatore) : ''}</div>`+
-            `<div class="ril-meta">${c.piante ? c.piante.length : 0} piante · ${esc(c.parte)||'—'}${c.laboratorio ? ' · ' + esc(c.laboratorio) : ''}</div>`+
+            `<div class="ril-meta">${c.spot ? 'Spot · ' + esc(c.statoPianta || 'stato n.d.') + (c.prelievo === 'Pool di piante' ? ' · Pool' : '') : (c.piante ? c.piante.length : 0) + ' piante'} · ${esc(c.parte)||'—'}${c.laboratorio ? ' · ' + esc(c.laboratorio) : ''}</div>`+
           `</div>`+
           `<div class="ril-right">`+
             `<span style="font-size:11px;font-weight:700;color:${sc}">${c.stato||'—'}</span>`+
@@ -5110,7 +5252,7 @@ function openSmpModal(id) {
     ['Operatore',     c.operatore || '—'],
     ['Conservazione', c.conservazione || '—'],
     ['Stato',         c.stato || '—'],
-  ].map(([l,v]) => '<div class="mig-item"><label>' + esc(l) + '</label><span>' + esc(v) + '</span></div>').join('');
+  ].concat(smpPrelievoLabel(c) ? [['Prelievo', smpPrelievoLabel(c)]] : []).concat(c.spot ? [['Tipo campione', 'Spot (senza rilievo)'], ['Stato pianta', c.statoPianta || '—']] : []).map(([l,v]) => '<div class="mig-item"><label>' + esc(l) + '</label><span>' + esc(v) + '</span></div>').join('');
 
   // Risultato analisi di laboratorio (se già importato dal PC)
   const rb = document.getElementById('sdm-risultato');
@@ -5122,7 +5264,18 @@ function openSmpModal(id) {
     ? c.pianteDettaglio
     : (c.piante || []).map(cod => ({ codice: cod, lat: null, lon: null, filare: '', posizione: '', classificazione: '' }));
 
+  const lblP = document.getElementById('sdm-piante-label');
+  if (lblP) lblP.textContent = c.spot ? 'Pianta campionata (spot)' : 'Piante campionate';
   const gpsCount = dettagli.filter(p => p.lat).length;
+  if (c.spot) {
+    const stClr = c.statoPianta === 'Sintomatica' ? '#B91C1C' : (c.statoPianta === 'Asintomatica' ? '#15803D' : '#6B7280');
+    pp.innerHTML = `<div style="font-size:12px;background:var(--surface2);border-radius:8px;padding:8px 10px;border-left:3px solid ${stClr};width:100%">
+      <strong style="color:${stClr}">${esc(c.statoPianta || 'Stato non indicato')}</strong>
+      ${c.sintomi ? `<div style="margin-top:3px">Sintomi: ${esc(c.sintomi)}</div>` : ''}
+      ${c.posizione ? `<div style="margin-top:3px">Posizione: ${esc(c.posizione)}</div>` : ''}
+      <div style="font-size:10px;color:${c.lat != null ? '#15803D' : '#9CA3AF'};margin-top:3px">${c.lat != null && c.lon != null ? UI_ICONS.pin + ' ' + (+c.lat).toFixed(5) + ', ' + (+c.lon).toFixed(5) : 'Nessuna coordinata GPS'}</div>
+    </div>`;
+  } else
   pp.innerHTML = dettagli.map(p => {
     const hasGps = !!(p.lat && p.lon);
     const gpsInfo = hasGps
@@ -5136,7 +5289,7 @@ function openSmpModal(id) {
   }).join('');
 
   // Riepilogo GPS sotto le piante
-  if (dettagli.length > 0) {
+  if (!c.spot && dettagli.length > 0) {
     pp.insertAdjacentHTML('beforeend',
       `<div style="font-size:11px;color:var(--text-soft);margin-top:6px;padding:4px 0;border-top:1px solid var(--border)">
         ${UI_ICONS.pin} ${gpsCount} di ${dettagli.length} piante georeferenziate
@@ -5168,7 +5321,17 @@ function editCampioneFromModal() {
   if (sel._syncFace) sel._syncFace();
   document.getElementById('cf-codice').value = c.codice || '';
   selectedPiante = [...(c.piante || [])];
-  loadPiantePicker(true);
+  cfSpotStato = c.statoPianta || '';
+  cfPrelievo = c.prelievo || 'Pianta singola';
+  document.getElementById('cf-pool-n').value = c.nPiantePool || '';
+  populateCfVigneto(c.vineyardId || '');
+  document.getElementById('cf-spot-pos').value = c.posizione || '';
+  document.getElementById('cf-sintomi').value = c.sintomi || '';
+  document.getElementById('cf-lat').value = c.lat != null ? c.lat : '';
+  document.getElementById('cf-lon').value = c.lon != null ? c.lon : '';
+  document.getElementById('cf-gps-status').textContent = '';
+  setCfMode(c.spot ? 'spot' : 'rilievo');
+  if (!c.spot) loadPiantePicker(true);
   setSel('cf-parte', c.parte || '');
   // Set tipo
   setSelectedTipi(tipiFromCampione(c));
@@ -5220,13 +5383,16 @@ function exportCampioniCsv() {
     'Laboratorio', 'Codice pianta', 'Filare', 'Posizione', 'Classificazione',
     'Latitudine', 'Longitudine', 'GPS disponibile',
     'N contenitori', 'Operatore', 'Stato', 'Conservazione', 'Note',
-    'Esito', 'Data referto', 'N referto', 'Metodo', 'Parametri', 'Note referto'
+    'Esito', 'Data referto', 'N referto', 'Metodo', 'Parametri', 'Note referto',
+    'Tipo campione', 'Stato pianta (spot)', 'Sintomi', 'Posizione / riferimento', 'Prelievo', 'N piante pool'
   ];
 
   const rows = [];
   campioni.forEach(c => {
     // Usa pianteDettaglio se presente, altrimenti genera righe base dai codici
-    const dettagli = c.pianteDettaglio && c.pianteDettaglio.length > 0
+    const dettagli = c.spot
+      ? [{ codice: '', filare: '', posizione: '', classificazione: '', lat: c.lat != null ? +c.lat : null, lon: c.lon != null ? +c.lon : null }]
+      : c.pianteDettaglio && c.pianteDettaglio.length > 0
       ? c.pianteDettaglio
       : (c.piante || []).map(cod => ({ codice: cod, filare: '', posizione: '', classificazione: '', lat: null, lon: null }));
 
@@ -5257,7 +5423,13 @@ function exportCampioniCsv() {
         (c.risultato && c.risultato.metodo) || '',
         ((c.risultato && c.risultato.parametri) || []).filter(x => x && (x.nome || x.valore))
           .map(x => (x.nome || '') + ': ' + (x.valore || '') + (x.unita ? ' ' + x.unita : '')).join(' | '),
-        (c.risultato && c.risultato.note) || ''
+        (c.risultato && c.risultato.note) || '',
+        c.spot ? 'Spot' : 'Da rilievo',
+        c.spot ? (c.statoPianta || '') : '',
+        c.spot ? (c.sintomi || '') : '',
+        c.spot ? (c.posizione || '') : '',
+        c.prelievo || '',
+        c.prelievo === 'Pool di piante' ? (c.nPiantePool || (c.piante || []).length) : ''
       ]);
     });
   });
@@ -6120,7 +6292,7 @@ function syncClearAll() {
     <div class="modal-info-grid" id="sdm-grid"></div>
     <div id="sdm-risultato"></div>
     <div style="margin-bottom:14px">
-      <div style="font-size:11px;color:var(--text-soft);margin-bottom:6px;text-transform:uppercase;letter-spacing:.4px;font-weight:700">Piante campionate</div>
+      <div id="sdm-piante-label" style="font-size:11px;color:var(--text-soft);margin-bottom:6px;text-transform:uppercase;letter-spacing:.4px;font-weight:700">Piante campionate</div>
       <div id="sdm-piante" style="display:flex;flex-wrap:wrap;gap:5px"></div>
     </div>
     <div style="font-size:13px;color:var(--text-soft);margin-bottom:16px" id="sdm-note"></div>
